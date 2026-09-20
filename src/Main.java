@@ -1,10 +1,11 @@
-import config.Conexion;
+import vista.ClienteView;
 
 public class Main {
 
     public static void main(String[] args) {
-        Conexion c= new Conexion();
-        c.conectar();
-
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            ClienteView view = new ClienteView();
+            view.setVisible(true);
+        });
     }
 }
