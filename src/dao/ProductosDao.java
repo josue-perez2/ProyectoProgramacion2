@@ -1,10 +1,12 @@
 package dao;
 
+import model.Productos;
+
 import java.util.List;
 
 public interface ProductosDao {
-    List<ProductosDao> listar();
-    void insertar(ProductosDao cliente);
-    void actualizar(ProductosDao cliente);
+    List<Productos> listar();
+    void insertar(Productos cliente);
+    void actualizar(Productos cliente);
     void eliminar(int id);
 }

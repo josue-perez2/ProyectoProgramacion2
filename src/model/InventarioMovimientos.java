@@ -4,60 +4,60 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class InventarioMovimientos {
-    private int idMon;
-    private int idProMon;
-    private LocalDateTime fechaMon;
-    private BigDecimal cantidadMon;
-    private String tipoMovimientoMon;
+    private int idImo;
+    private int idProImo;
+    private LocalDateTime fechaImo;
+    private BigDecimal cantidadImo;
+    private String tipoMovimientoImo;
 
     public InventarioMovimientos() {
     }
 
-    public InventarioMovimientos(int idMon, int idProMon, LocalDateTime fechaMon, BigDecimal cantidadMon, String tipoMovimientoMon) {
-        this.idMon = idMon;
-        this.idProMon = idProMon;
-        this.fechaMon = fechaMon;
-        this.cantidadMon = cantidadMon;
-        this.tipoMovimientoMon = tipoMovimientoMon;
+    public InventarioMovimientos(int idImo, int idProImo, LocalDateTime fechaImo, BigDecimal cantidadImo, String tipoMovimientoImo) {
+        this.idImo = idImo;
+        this.idProImo = idProImo;
+        this.fechaImo = fechaImo;
+        this.cantidadImo = cantidadImo;
+        this.tipoMovimientoImo = tipoMovimientoImo;
     }
 
-    public int getIdMon() {
-        return idMon;
+    public int getIdImo() {
+        return idImo;
     }
 
-    public void setIdMon(int idMon) {
-        this.idMon = idMon;
+    public void setIdImo(int idImo) {
+        this.idImo = idImo;
     }
 
-    public int getIdProMon() {
-        return idProMon;
+    public int getIdProImo() {
+        return idProImo;
     }
 
-    public void setIdProMon(int idProMon) {
-        this.idProMon = idProMon;
+    public void setIdProImo(int idProImo) {
+        this.idProImo = idProImo;
     }
 
-    public LocalDateTime getFechaMon() {
-        return fechaMon;
+    public LocalDateTime getFechaImo() {
+        return fechaImo;
     }
 
-    public void setFechaMon(LocalDateTime fechaMon) {
-        this.fechaMon = fechaMon;
+    public void setFechaImo(LocalDateTime fechaImo) {
+        this.fechaImo = fechaImo;
     }
 
-    public BigDecimal getCantidadMon() {
-        return cantidadMon;
+    public BigDecimal getCantidadImo() {
+        return cantidadImo;
     }
 
-    public void setCantidadMon(BigDecimal cantidadMon) {
-        this.cantidadMon = cantidadMon;
+    public void setCantidadImo(BigDecimal cantidadImo) {
+        this.cantidadImo = cantidadImo;
     }
 
-    public String getTipoMovimientoMon() {
-        return tipoMovimientoMon;
+    public String getTipoMovimientoImo() {
+        return tipoMovimientoImo;
     }
 
-    public void setTipoMovimientoMon(String tipoMovimientoMon) {
-        this.tipoMovimientoMon = tipoMovimientoMon;
+    public void setTipoMovimientoImo(String tipoMovimientoImo) {
+        this.tipoMovimientoImo = tipoMovimientoImo;
     }
 }

@@ -1,9 +1,11 @@
 package model;
 
+import java.time.LocalDateTime;
+
 public class HistorialPuntos {
     private int idHis;
     private int idCliHis;
-    private int fechaHis;
+    private LocalDateTime fechaHis;
     private String tipoOperacionHis;
     private int puntosHis;
     private String referenciaHis;
@@ -11,7 +13,7 @@ public class HistorialPuntos {
     public HistorialPuntos() {
     }
 
-    public HistorialPuntos(int idHis, int idCliHis, int fechaHis, String tipoOperacionHis, int puntosHis, String referenciaHis) {
+    public HistorialPuntos(int idHis, int idCliHis, LocalDateTime fechaHis, String tipoOperacionHis, int puntosHis, String referenciaHis) {
         this.idHis = idHis;
         this.idCliHis = idCliHis;
         this.fechaHis = fechaHis;
@@ -36,11 +38,11 @@ public class HistorialPuntos {
         this.idCliHis = idCliHis;
     }
 
-    public int getFechaHis() {
+    public LocalDateTime getFechaHis() {
         return fechaHis;
     }
 
-    public void setFechaHis(int fechaHis) {
+    public void setFechaHis(LocalDateTime fechaHis) {
         this.fechaHis = fechaHis;
     }
 

@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 
 public class DetalleSandwich {
     private int idDetSan;
-    private int idSamDet;
+    private int idSanDet;
     private int idProDet;
     private BigDecimal cantidadDet;
     private String obligatorioDet;
@@ -12,9 +12,9 @@ public class DetalleSandwich {
     public DetalleSandwich() {
     }
 
-    public DetalleSandwich(int idDetSan, int idSamDet, int idProDet, BigDecimal cantidadDet, String obligatorioDet) {
+    public DetalleSandwich(int idDetSan, int idSanDet, int idProDet, BigDecimal cantidadDet, String obligatorioDet) {
         this.idDetSan = idDetSan;
-        this.idSamDet = idSamDet;
+        this.idSanDet = idSanDet;
         this.idProDet = idProDet;
         this.cantidadDet = cantidadDet;
         this.obligatorioDet = obligatorioDet;
@@ -28,12 +28,12 @@ public class DetalleSandwich {
         this.idDetSan = idDetSan;
     }
 
-    public int getIdSamDet() {
-        return idSamDet;
+    public int getIdSanDet() {
+        return idSanDet;
     }
 
-    public void setIdSamDet(int idSamDet) {
-        this.idSamDet = idSamDet;
+    public void setIdSanDet(int idSanDet) {
+        this.idSanDet = idSanDet;
     }
 
     public int getIdProDet() {

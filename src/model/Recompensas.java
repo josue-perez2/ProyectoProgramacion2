@@ -5,17 +5,19 @@ public class Recompensas {
     private String nombreRec;
     private int puntosRequeridosRec;
     private String tipoItemRec;
+    private int idItemRec;
     private String activoRec;
 
     public Recompensas() {
     }
 
-    public Recompensas(int idRec, String nombreRec, int puntosRequeridosRec, String tipoItemRec, String activoRec) {
+    public Recompensas(int idRec, String nombreRec, int puntosRequeridosRec, String tipoItemRec, String activoRec, int idItemRec) {
         this.idRec = idRec;
         this.nombreRec = nombreRec;
         this.puntosRequeridosRec = puntosRequeridosRec;
         this.tipoItemRec = tipoItemRec;
         this.activoRec = activoRec;
+        this.idItemRec = idItemRec;
     }
 
     public int getIdRec() {
@@ -56,5 +58,12 @@ public class Recompensas {
 
     public void setActivoRec(String activoRec) {
         this.activoRec = activoRec;
+    }
+
+    public int getIdItemRec() {
+        return idItemRec;
+    }
+    public void setIdItemRec(int idItemRec) {
+        this.idItemRec = idItemRec;
     }
 }
