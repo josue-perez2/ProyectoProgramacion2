@@ -1,10 +1,10 @@
-import vista.ClienteView;
+import vista.DashboardView;
 
 public class Main {
 
     public static void main(String[] args) {
         javax.swing.SwingUtilities.invokeLater(() -> {
-            ClienteView view = new ClienteView();
+            DashboardView view = new DashboardView();
             view.setVisible(true);
         });
     }

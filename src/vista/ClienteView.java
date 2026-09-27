@@ -20,6 +20,9 @@ public class ClienteView extends JFrame {
     private final JButton btnModificar = new JButton("Modificar");
     private final JButton btnEliminar = new JButton("Eliminar");
     private final JButton btnLimpiar = new JButton("Limpiar");
+    private final JButton btnRegresar = new JButton("Regresar");
+
+    private final Window parent;
 
     private final JTextField txtId = new JTextField();
     private final JTextField txtDpi = new JTextField();
@@ -55,14 +58,19 @@ public class ClienteView extends JFrame {
     };
 
     public ClienteView() {
+        this(null);
+    }
+
+    public ClienteView(Window parent) {
         super("Gestión de Clientes");
+        this.parent = parent;
         this.clienteService = new ClienteService();
         iniciarComponentes();
         cargarTabla();
     }
 
     private void iniciarComponentes() {
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setSize(900, 600);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout(10, 10));
@@ -96,16 +104,19 @@ public class ClienteView extends JFrame {
         btnModificar.setPreferredSize(new Dimension(110, 30));
         btnEliminar.setPreferredSize(new Dimension(110, 30));
         btnLimpiar.setPreferredSize(new Dimension(110, 30));
+        btnRegresar.setPreferredSize(new Dimension(110, 30));
 
         btnAgregar.addActionListener(e -> guardarCliente());
         btnModificar.addActionListener(e -> actualizarCliente());
         btnEliminar.addActionListener(e -> eliminarCliente());
         btnLimpiar.addActionListener(e -> limpiarFormulario());
+        btnRegresar.addActionListener(e -> regresar());
 
         panelBotones.add(btnAgregar);
         panelBotones.add(btnModificar);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
+        panelBotones.add(btnRegresar);
         panelBotones.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         JPanel panelTabla = new JPanel(new BorderLayout());
@@ -284,5 +295,12 @@ public class ClienteView extends JFrame {
         txtSaldo.setText("0");
         cmbEstado.setSelectedItem("A");
         tabla.clearSelection();
+    }
+
+    private void regresar() {
+        dispose();
+        if (parent != null && parent.isDisplayable()) {
+            parent.toFront();
+        }
     }
 }

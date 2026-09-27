@@ -20,13 +20,31 @@ public class DetalleMenuDaoImpl implements DetalleMenuDao {
     }
     @Override
     public List<DetalleMenu> listar() {
+        return consultar(null);
+    }
+
+    @Override
+    public List<DetalleMenu> listarPorMenu(int idMenDet) {
+        return consultar(idMenDet);
+    }
+
+    private List<DetalleMenu> consultar(Integer idMenDet) {
         List<DetalleMenu> detalleMenu = new ArrayList<>();
-        String sql = "SELECT ID_DET_MEN, ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET FROM DETALLE_MENU";
+        StringBuilder sql = new StringBuilder("SELECT ID_DET_MEN, ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET FROM DETALLE_MENU WHERE 1 = 1");
+        if (idMenDet != null) {
+            sql.append(" AND ID_MEN_DET = ?");
+        }
+        sql.append(" ORDER BY ID_DET_MEN");
+
         try (Connection conn = conexion.conectar();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                detalleMenu.add(mapear(rs));
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            if (idMenDet != null) {
+                ps.setInt(1, idMenDet);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    detalleMenu.add(mapear(rs));
+                }
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -36,35 +54,34 @@ public class DetalleMenuDaoImpl implements DetalleMenuDao {
 
     @Override
     public void insertar(DetalleMenu detalleMenu) {
-        String sql = "INSERT INTO CLIENTE (ID_DET_MEN, ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO DETALLE_MENU (ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET) " +
+                "VALUES (?, ?, ?, ?)";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, detalleMenu.getIdDetMen());
-            ps.setInt(2, detalleMenu.getIdMenDet());
-            ps.setString(3, detalleMenu.getTipoItemDet());
+            ps.setInt(1, detalleMenu.getIdMenDet());
+            ps.setString(2, detalleMenu.getTipoItemDet());
+            ps.setInt(3, detalleMenu.getIdItemDet());
             ps.setBigDecimal(4, detalleMenu.getCantidadDet());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     @Override
     public void actualizar(DetalleMenu detalleMenu) {
-        String sql = "UPDATE DETALLE_MENU SET  ID_MEN_DET = ?, TIPO_ITEM_DET = ?, ID_ITEM_DET = ?, CANTIDAD_DET = ? WHERE ID_DET_MEN = ? " ;
+        String sql = "UPDATE DETALLE_MENU SET ID_MEN_DET = ?, TIPO_ITEM_DET = ?, ID_ITEM_DET = ?, CANTIDAD_DET = ? WHERE ID_DET_MEN = ?";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, detalleMenu.getIdMenDet());
             ps.setString(2, detalleMenu.getTipoItemDet());
-            ps.setBigDecimal(3, detalleMenu.getCantidadDet());
-            ps.setInt(4, detalleMenu.getIdDetMen());
+            ps.setInt(3, detalleMenu.getIdItemDet());
+            ps.setBigDecimal(4, detalleMenu.getCantidadDet());
+            ps.setInt(5, detalleMenu.getIdDetMen());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     @Override

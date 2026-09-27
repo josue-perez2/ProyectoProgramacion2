@@ -33,12 +33,11 @@ public class CategoriasDaoImpl implements CategoriaDao {
 
     @Override
     public void insertar(Categorias categoria) {
-        String sql = "INSERT INTO CATEGORIAS (ID_CAT, NOMBRE_CAT) " +
-                "VALUES (?, ?)";
+        String sql = "INSERT INTO CATEGORIAS (NOMBRE_CAT) " +
+                "VALUES (?)";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, categoria.getIdCat());
-            ps.setString(2, categoria.getNombreCat());
+            ps.setString(1, categoria.getNombreCat());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);

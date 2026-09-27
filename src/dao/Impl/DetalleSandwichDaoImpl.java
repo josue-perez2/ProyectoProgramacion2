@@ -19,13 +19,31 @@ public class DetalleSandwichDaoImpl implements DetalleSandwichDao {
     }
     @Override
     public List<DetalleSandwich> listar() {
+        return consultar(null);
+    }
+
+    @Override
+    public List<DetalleSandwich> listarPorSandwich(int idSanDet) {
+        return consultar(idSanDet);
+    }
+
+    private List<DetalleSandwich> consultar(Integer idSanDet) {
         List<DetalleSandwich> detalleSandwiches = new ArrayList<>();
-        String sql = "SELECT ID_DET_SAN, ID_DET_SAN, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET FROM DETALLE_SANDWICH";
+        StringBuilder sql = new StringBuilder("SELECT ID_DET_SAN, ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET FROM DETALLE_SANDWICH WHERE 1 = 1");
+        if (idSanDet != null) {
+            sql.append(" AND ID_SAN_DET = ?");
+        }
+        sql.append(" ORDER BY ID_DET_SAN");
+
         try (Connection conn = conexion.conectar();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                detalleSandwiches.add(mapear(rs));
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            if (idSanDet != null) {
+                ps.setInt(1, idSanDet);
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    detalleSandwiches.add(mapear(rs));
+                }
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -35,15 +53,14 @@ public class DetalleSandwichDaoImpl implements DetalleSandwichDao {
 
     @Override
     public void insertar(DetalleSandwich detalleSandwich) {
-        String sql = "INSERT INTO DETALLE_SANDWICH (ID_DET_SAN, ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO DETALLE_SANDWICH (ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET) " +
+                "VALUES (?, ?, ?, ?)";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, detalleSandwich.getIdDetSan());
-            ps.setInt(2, detalleSandwich.getIdSanDet());
-            ps.setInt(3, detalleSandwich.getIdProDet());
-            ps.setBigDecimal(4, detalleSandwich.getCantidadDet());
-            ps.setString(5, detalleSandwich.getObligatorioDet());
+            ps.setInt(1, detalleSandwich.getIdSanDet());
+            ps.setInt(2, detalleSandwich.getIdProDet());
+            ps.setBigDecimal(3, detalleSandwich.getCantidadDet());
+            ps.setString(4, detalleSandwich.getObligatorioDet());
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -68,7 +85,7 @@ public class DetalleSandwichDaoImpl implements DetalleSandwichDao {
 
     @Override
     public void eliminar(int id) {
-        String sql = "DELETE FROM DETALLE_SANDWICH WHERE ID_DET_MEN = ?";
+        String sql = "DELETE FROM DETALLE_SANDWICH WHERE ID_DET_SAN = ?";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
