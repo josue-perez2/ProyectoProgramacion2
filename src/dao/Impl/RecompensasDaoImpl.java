@@ -14,12 +14,12 @@ public class RecompensasDaoImpl implements RecompesasDao {
     }
 
     @Override
-    public void insertar(Recompensas cliente) {
+    public void insertar(Recompensas recompensa) {
 
     }
 
     @Override
-    public void actualizar(Recompensas cliente) {
+    public void actualizar(Recompensas recompensa) {
 
     }
 

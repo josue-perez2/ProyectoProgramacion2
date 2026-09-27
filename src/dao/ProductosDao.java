@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface ProductosDao {
     List<Productos> listar();
-    void insertar(Productos cliente);
-    void actualizar(Productos cliente);
+    void insertar(Productos producto);
+    void actualizar(Productos producto);
     void eliminar(int id);
 }

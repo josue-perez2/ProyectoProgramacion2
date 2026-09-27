@@ -14,12 +14,12 @@ public class SandwichDaoImpl implements SandwichDao {
     }
 
     @Override
-    public void insertar(Sandwich cliente) {
+    public void insertar(Sandwich sandwich) {
 
     }
 
     @Override
-    public void actualizar(Sandwich cliente) {
+    public void actualizar(Sandwich sandwich) {
 
     }
 

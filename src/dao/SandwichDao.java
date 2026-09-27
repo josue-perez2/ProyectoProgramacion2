@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface SandwichDao {
     List<Sandwich> listar();
-    void insertar(Sandwich cliente);
-    void actualizar(Sandwich cliente);
+    void insertar(Sandwich sandwich);
+    void actualizar(Sandwich sandwich);
     void eliminar(int id);
 }

@@ -1,10 +1,12 @@
 package dao;
 
+import model.DetalleSandwich;
+
 import java.util.List;
 
 public interface DetalleSandwichDao {
-    List<DetalleSandwichDao> listar();
-    void insertar(DetalleSandwichDao cliente);
-    void actualizar(DetalleSandwichDao cliente);
+    List<DetalleSandwich> listar();
+    void insertar(DetalleSandwich detalleSandwich);
+    void actualizar(DetalleSandwich detalleSandwich);
     void eliminar(int id);
 }

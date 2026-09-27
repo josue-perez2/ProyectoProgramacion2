@@ -17,12 +17,12 @@ public class PagosDaoImpl implements PagosDao {
     }
 
     @Override
-    public void insertar(Pagos cliente) {
+    public void insertar(Pagos pago) {
 
     }
 
     @Override
-    public void actualizar(Pagos cliente) {
+    public void actualizar(Pagos pago) {
 
     }
 

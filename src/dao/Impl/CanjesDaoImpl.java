@@ -1,32 +1,81 @@
 package dao.Impl;
 
+import config.Conexion;
 import dao.CanjesDao;
 import model.Canjes;
+import model.Cliente;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Timestamp;
+import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class CanjesDaoImpl implements CanjesDao {
+    private final Conexion conexion;
+
+    public CanjesDaoImpl(){
+        this.conexion = new Conexion();
+    }
     @Override
     public List<Canjes> listar() {
-        return List.of();
+        List<Canjes> canjes = new ArrayList<>();
+        String sql = "SELECT ID_CAN, ID_CLI_CAN, ID_REC_CAN, FECHA_CAN, PUNTOS_RECOMPENSA_CAN FROM CANJES";
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                canjes.add(mapear(rs));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return canjes;
     }
 
     @Override
     public void insertar(Canjes canjes) {
+        String sql = "INSERT INTO CANJES (ID_CAN, ID_CLI_CAN, ID_REC_CAN, FECHA_CAN, PUNTOS_RECOMPENSA_CAN) " +
+                "VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, canjes.getIdCan());
+            ps.setInt(2, canjes.getIdCliCan());
+            ps.setInt(3, canjes.getIdRecCan());
+            ps.setTimestamp(4, Timestamp.valueOf(canjes.getFechaCan()));
+            ps.setInt(5, canjes.getPuntosRecompensaCan());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
     }
 
     @Override
     public void actualizar(Canjes canjes) {
+        String sql = "UPDATE CANJES SET ID_CLI_CAN = ?, ID_REC_CAN = ?, FECHA_CAN = ?, PUNTOS_RECOMPENSA_CAN = ? WHERE ID_CAN = ? " ;
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, canjes.getIdCliCan());
+            ps.setInt(2, canjes.getIdRecCan());
+            ps.setTimestamp(3, Timestamp.valueOf(canjes.getFechaCan()));
+            ps.setInt(4, canjes.getPuntosRecompensaCan());
+            ps.setInt(5, canjes.getIdCan());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
 
     }
 
     @Override
     public void eliminar(int id) {
-
+        String sql = "DELETE FROM CANJES WHERE ID_CAN = ?";
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 

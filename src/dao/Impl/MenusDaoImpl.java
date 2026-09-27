@@ -15,12 +15,12 @@ public class MenusDaoImpl implements MenusDao {
     }
 
     @Override
-    public void insertar(Menus cliente) {
+    public void insertar(Menus menu) {
 
     }
 
     @Override
-    public void actualizar(Menus cliente) {
+    public void actualizar(Menus menu) {
 
     }
 

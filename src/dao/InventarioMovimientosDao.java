@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface InventarioMovimientosDao {
     List<InventarioMovimientos> listar();
-    void insertar(InventarioMovimientos cliente);
-    void actualizar(InventarioMovimientos cliente);
+    void insertar(InventarioMovimientos inventarioMovimiento);
+    void actualizar(InventarioMovimientos inventarioMovimiento);
     void eliminar(int id);
 }

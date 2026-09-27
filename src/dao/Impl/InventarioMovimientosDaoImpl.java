@@ -15,12 +15,12 @@ public class InventarioMovimientosDaoImpl implements InventarioMovimientosDao {
     }
 
     @Override
-    public void insertar(InventarioMovimientos cliente) {
+    public void insertar(InventarioMovimientos inventarioMovimiento) {
 
     }
 
     @Override
-    public void actualizar(InventarioMovimientos cliente) {
+    public void actualizar(InventarioMovimientos inventarioMovimiento) {
 
     }
 

@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface DetalleMenuDao {
     List<DetalleMenu> listar();
-    void insertar(DetalleMenu cliente);
-    void actualizar(DetalleMenu cliente);
+    void insertar(DetalleMenu detalleMenu);
+    void actualizar(DetalleMenu detalleMenu);
     void eliminar(int id);
 }

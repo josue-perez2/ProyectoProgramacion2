@@ -14,12 +14,12 @@ public class ProductosDaoImpl implements ProductosDao {
     }
 
     @Override
-    public void insertar(Productos cliente) {
+    public void insertar(Productos producto) {
 
     }
 
     @Override
-    public void actualizar(Productos cliente) {
+    public void actualizar(Productos producto) {
 
     }
 

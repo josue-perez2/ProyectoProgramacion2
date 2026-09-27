@@ -6,7 +6,7 @@ import java.util.List;
 
 public interface DetallesPedidoDao {
     List<DetallesPedido> listar();
-    void insertar(DetallesPedido cliente);
-    void actualizar(DetallesPedido cliente);
+    void insertar(DetallesPedido detallesPedido);
+    void actualizar(DetallesPedido detallesPedido);
     void eliminar(int id);
 }
