@@ -23,7 +23,7 @@ public class ClienteDaoImpl implements ClienteDao {
     @Override
     public List<Cliente> listar() {
         List<Cliente> clientes = new ArrayList<>();
-        String sql = "SELECT ID_CLI, DPI_CLI, NOMBRE_CLI, TELEFONO_CLI, CORREO_CLI, DIRECCION_CLI, SALDO_PUNTO_CLI, ESTADO_CLI FROM CLIENTE";
+        String sql = "SELECT ID_CLI, DPI_CLI, NOMBRE_CLI, TELEFONO_CLI, CORREO_CLI, DIRECCION_CLI, SALDO_PUNTO_CLI, ESTADO_CLI FROM CLIENTES";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
@@ -38,7 +38,7 @@ public class ClienteDaoImpl implements ClienteDao {
 
     @Override
     public Cliente buscarClientePorId(int id) {
-        String sql = "SELECT ID_CLI, DPI_CLI, NOMBRE_CLI, TELEFONO_CLI, CORREO_CLI, DIRECCION_CLI, SALDO_PUNTO_CLI, ESTADO_CLI FROM CLIENTE WHERE ID_CLI = ?";
+        String sql = "SELECT ID_CLI, DPI_CLI, NOMBRE_CLI, TELEFONO_CLI, CORREO_CLI, DIRECCION_CLI, SALDO_PUNTO_CLI, ESTADO_CLI FROM CLIENTES WHERE ID_CLI = ?";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -55,7 +55,7 @@ public class ClienteDaoImpl implements ClienteDao {
 
     @Override
     public void insertar(Cliente cliente) {
-        String sql = "INSERT INTO CLIENTE (DPI_CLI, NOMBRE_CLI, TELEFONO_CLI, CORREO_CLI, DIRECCION_CLI, SALDO_PUNTO_CLI, ESTADO_CLI) " +
+        String sql = "INSERT INTO CLIENTES (DPI_CLI, NOMBRE_CLI, TELEFONO_CLI, CORREO_CLI, DIRECCION_CLI, SALDO_PUNTO_CLI, ESTADO_CLI) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -74,7 +74,7 @@ public class ClienteDaoImpl implements ClienteDao {
 
     @Override
     public void actualizar(Cliente cliente) {
-        String sql = "UPDATE CLIENTE SET DPI_CLI = ?, NOMBRE_CLI = ?, TELEFONO_CLI = ?, CORREO_CLI = ?, DIRECCION_CLI = ?, " +
+        String sql = "UPDATE CLIENTES SET DPI_CLI = ?, NOMBRE_CLI = ?, TELEFONO_CLI = ?, CORREO_CLI = ?, DIRECCION_CLI = ?, " +
                 "SALDO_PUNTO_CLI = ?, ESTADO_CLI = ? WHERE ID_CLI = ?";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -94,7 +94,7 @@ public class ClienteDaoImpl implements ClienteDao {
 
     @Override
     public void eliminar(int id) {
-        String sql = "DELETE FROM CLIENTE WHERE ID_CLI = ?";
+        String sql = "DELETE FROM CLIENTES WHERE ID_CLI = ?";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -106,7 +106,7 @@ public class ClienteDaoImpl implements ClienteDao {
 
     @Override
     public void integridad(int id) {
-        String sql = "UPDATE CLIENTE SET ESTADO_CLI = 'I' WHERE ID_CLI = ?";
+        String sql = "UPDATE CLIENTES SET ESTADO_CLI = 'I' WHERE ID_CLI = ?";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, id);

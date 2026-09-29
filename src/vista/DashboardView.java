@@ -17,6 +17,7 @@ public class DashboardView extends JFrame {
     private final JTextField txtDpi = new JTextField();
 
     private final JButton btnSeleccionar = new JButton("Seleccionar");
+    private final JButton btnPedido = new JButton("Nuevo Pedido");
     private final JButton btnAdministracion = new JButton("Administracion");
     private final JButton btnAdministracionCliente = new JButton("Administracion Cliente");
 
@@ -100,14 +101,17 @@ public class DashboardView extends JFrame {
 
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
         btnSeleccionar.setPreferredSize(new Dimension(130, 30));
+        btnPedido.setPreferredSize(new Dimension(140, 30));
         btnAdministracion.setPreferredSize(new Dimension(150, 30));
         btnAdministracionCliente.setPreferredSize(new Dimension(200, 30));
 
         btnSeleccionar.addActionListener(e -> confirmarSeleccion());
+        btnPedido.addActionListener(e -> abrirPedido());
         btnAdministracion.addActionListener(e -> abrirAdministracion());
         btnAdministracionCliente.addActionListener(e -> abrirAdministracionCliente());
 
         panelBotones.add(btnSeleccionar);
+        panelBotones.add(btnPedido);
         panelBotones.add(btnAdministracion);
         panelBotones.add(btnAdministracionCliente);
         panelBotones.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -179,6 +183,11 @@ public class DashboardView extends JFrame {
                 + " - " + clienteSeleccionado.getNombreCli()
                 + " (DPI " + clienteSeleccionado.getDpiCli() + ")");
         lblEstado.setForeground(new Color(0, 128, 0));
+    }
+
+    private void abrirPedido() {
+        PedidoView ventana = new PedidoView(this, clienteSeleccionado);
+        ventana.setVisible(true);
     }
 
     private void abrirAdministracion() {
