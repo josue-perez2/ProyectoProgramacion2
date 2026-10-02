@@ -16,15 +16,30 @@ public class LoginController extends ApiHandler {
 
         Map<String, Object> cuerpo = cuerpo(exchange);
         String correo = Json.texto(cuerpo, "correo");
+        String password = Json.texto(cuerpo, "password");
 
         if (correo == null) {
             error(exchange, 400, "El campo correo es obligatorio");
+            return;
+        }
+        if (password == null) {
+            error(exchange, 400, "El campo password es obligatorio");
             return;
         }
 
         Cliente cliente = clienteService.buscarPorCorreo(correo);
         if (cliente == null) {
             error(exchange, 404, "El correo " + correo + " no esta registrado en la tabla CLIENTES");
+            return;
+        }
+
+        if (cliente.getPasswordCli() == null || cliente.getPasswordCli().isBlank()) {
+            error(exchange, 409, "El cliente no tiene una password registrada, debe registrarse primero");
+            return;
+        }
+
+        if (!clienteService.verificarClave(password, cliente.getPasswordCli())) {
+            error(exchange, 401, "La contrasena es incorrecta");
             return;
         }
 

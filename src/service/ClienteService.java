@@ -3,6 +3,7 @@ package service;
 import dao.ClienteDao;
 import dao.Impl.ClienteDaoImpl;
 import model.Cliente;
+import util.Clave;
 
 import java.util.List;
 import java.util.UUID;
@@ -43,12 +44,20 @@ public class ClienteService {
         return clienteDao.buscarPorCorreo(correo);
     }
 
+    public Cliente buscarPorDpiYCcorreo(String dpi, String correo) {
+        return clienteDao.buscarPorDpiYCcorreo(dpi, correo);
+    }
+
     public Cliente buscarPorToken(String token) {
         return clienteDao.buscarPorToken(token);
     }
 
-    public void registrarAcceso(int id, String password) {
-        clienteDao.registrarAcceso(id, password);
+    public void registrarAcceso(int id, String passwordHash) {
+        clienteDao.registrarAcceso(id, passwordHash);
+    }
+
+    public boolean verificarClave(String passwordHash, String hashAlmacenado) {
+        return Clave.coincide(passwordHash, hashAlmacenado);
     }
 
     public String generarToken(int id) {

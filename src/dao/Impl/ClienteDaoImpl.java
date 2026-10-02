@@ -3,6 +3,7 @@ package dao.Impl;
 import config.Conexion;
 import dao.ClienteDao;
 import model.Cliente;
+import util.FormatoTexto;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -126,15 +127,23 @@ public class ClienteDaoImpl implements ClienteDao {
     }
 
     @Override
+    public Cliente buscarPorDpiYCcorreo(String dpi, String correo) {
+        String sql = SELECT_BASE + " WHERE REGEXP_REPLACE(DPI_CLI, '\\s', '') = ? AND UPPER(CORREO_CLI) = UPPER(?)";
+        return consultarUnico(sql, FormatoTexto.soloDigitos(dpi), correo);
+    }
+
+    @Override
     public Cliente buscarPorToken(String token) {
         String sql = SELECT_BASE + " WHERE TOKEN_CLI = ?";
         return consultarUnico(sql, token);
     }
 
-    private Cliente consultarUnico(String sql, String valor) {
+    private Cliente consultarUnico(String sql, String... valores) {
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, valor);
+            for (int i = 0; i < valores.length; i++) {
+                ps.setString(i + 1, valores[i]);
+            }
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return mapear(rs);
@@ -147,11 +156,11 @@ public class ClienteDaoImpl implements ClienteDao {
     }
 
     @Override
-    public void registrarAcceso(int id, String password) {
+    public void registrarAcceso(int id, String passwordHash) {
         String sql = "UPDATE CLIENTES SET PASSWORD_CLI = ? WHERE ID_CLI = ?";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, password);
+            ps.setString(1, passwordHash);
             ps.setInt(2, id);
             ps.executeUpdate();
         } catch (SQLException e) {
