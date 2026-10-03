@@ -12,6 +12,11 @@ public interface ClienteDao {
     void actualizar(Cliente cliente);
     void eliminar(int id);
     void integridad(int id);
+    Cliente buscarPorCorreo(String correo);
+    Cliente buscarPorDpiYCcorreo(String dpi, String correo);
+    Cliente buscarPorToken(String token);
+    void registrarAcceso(int id, String passwordHash);
+    void actualizarToken(int id, String token);
 
 
 }

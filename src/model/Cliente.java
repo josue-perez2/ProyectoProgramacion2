@@ -11,6 +11,8 @@ public class Cliente {
     private String direccionCli;
     private BigDecimal saldoPuntoCli;
     private String estadoCli;
+    private String passwordCli;
+    private String tokenCli;
 
     public Cliente() {
     }
@@ -88,5 +90,21 @@ public class Cliente {
 
     public void setEstadoCli(String estadoCli) {
         this.estadoCli = estadoCli;
+    }
+
+    public String getPasswordCli() {
+        return passwordCli;
+    }
+
+    public void setPasswordCli(String passwordCli) {
+        this.passwordCli = passwordCli;
+    }
+
+    public String getTokenCli() {
+        return tokenCli;
+    }
+
+    public void setTokenCli(String tokenCli) {
+        this.tokenCli = tokenCli;
     }
 }

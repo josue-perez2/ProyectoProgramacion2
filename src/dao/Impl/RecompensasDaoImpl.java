@@ -1,16 +1,39 @@
 package dao.Impl;
 
+import config.Conexion;
 import dao.RecompesasDao;
 import model.Recompensas;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class RecompensasDaoImpl implements RecompesasDao {
+
+    private final Conexion conexion;
+
+    public RecompensasDaoImpl() {
+        this.conexion = new Conexion();
+    }
+
     @Override
     public List<Recompensas> listar() {
-        return List.of();
+        List<Recompensas> recompensas = new ArrayList<>();
+        String sql = "SELECT ID_REC, NOMBRE_REC, PUNTOS_REQUERIDOS_REC, TIPO_ITEM_REC, ID_ITEM_REC, ACTIVO_REC " +
+                "FROM RECOMPENSAS WHERE ACTIVO_REC = 'A' ORDER BY PUNTOS_REQUERIDOS_REC, ID_REC";
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                recompensas.add(mapear(rs));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return recompensas;
     }
 
     @Override
