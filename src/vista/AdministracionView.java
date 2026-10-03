@@ -1,66 +1,96 @@
 package vista;
 
+import vista.util.FabricaDaisyUI;
+import vista.util.TemaGestor;
+
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 public class AdministracionView extends JFrame {
 
-    private final JButton btnIrCategoria = new JButton("Ir");
-    private final JButton btnIrProducto = new JButton("Ir");
-    private final JButton btnIrSandwich = new JButton("Ir");
-    private final JButton btnIrMenu = new JButton("Ir");
-    private final JButton btnRegresar = new JButton("Regresar");
+    private final JButton btnIrCategoria = new JButton("Gestionar Categorías");
+    private final JButton btnIrProducto = new JButton("Gestionar Productos");
+    private final JButton btnIrSandwich = new JButton("Gestionar Sándwiches");
+    private final JButton btnIrMenu = new JButton("Gestionar Combos");
+    private final JButton btnRegresar = new JButton("← Volver al Inicio");
 
     private final Window parent;
 
     public AdministracionView(Window parent) {
-        super("Administracion");
+        super("Administración");
         this.parent = parent;
         iniciarComponentes();
     }
 
     private void iniciarComponentes() {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(400, 420);
+        setSize(800, 480);
+        setMinimumSize(new Dimension(740, 440));
         setLocationRelativeTo(parent);
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(16, 16));
+        getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
 
-        JPanel panelOpciones = new JPanel(new GridLayout(0, 1, 10, 10));
-        panelOpciones.setBorder(BorderFactory.createTitledBorder("Opciones de administracion"));
+        JPanel panelPrincipal = new JPanel(new BorderLayout(16, 16));
+        panelPrincipal.setBorder(new EmptyBorder(22, 28, 22, 28));
+        panelPrincipal.setOpaque(false);
 
-        btnIrCategoria.setPreferredSize(new Dimension(110, 30));
-        btnIrProducto.setPreferredSize(new Dimension(110, 30));
-        btnIrSandwich.setPreferredSize(new Dimension(110, 30));
-        btnIrMenu.setPreferredSize(new Dimension(110, 30));
+        JLabel lblTitulo = new JLabel("Administración del Sistema");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTitulo.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #0f172a; [dark]foreground: #f8f8f2");
+        panelPrincipal.add(lblTitulo, BorderLayout.NORTH);
+
+        JPanel panelTarjetas = new JPanel(new GridLayout(2, 2, 16, 16));
+        panelTarjetas.setOpaque(false);
+
+        FabricaDaisyUI.aplicarBotonSecundario(btnIrCategoria);
+        FabricaDaisyUI.aplicarBotonPrimario(btnIrProducto);
+        FabricaDaisyUI.aplicarBotonAcento(btnIrSandwich);
+        FabricaDaisyUI.aplicarBotonPrimario(btnIrMenu);
+        FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
+
+        btnIrCategoria.setPreferredSize(new Dimension(185, 38));
+        btnIrProducto.setPreferredSize(new Dimension(185, 38));
+        btnIrSandwich.setPreferredSize(new Dimension(185, 38));
+        btnIrMenu.setPreferredSize(new Dimension(185, 38));
+        btnRegresar.setPreferredSize(new Dimension(170, 38));
+
         btnIrCategoria.addActionListener(e -> abrirCategoria());
         btnIrProducto.addActionListener(e -> abrirProducto());
         btnIrSandwich.addActionListener(e -> abrirSandwich());
         btnIrMenu.addActionListener(e -> abrirMenu());
-
-        panelOpciones.add(crearOpcion("Categoria", btnIrCategoria));
-        panelOpciones.add(crearOpcion("Producto", btnIrProducto));
-        panelOpciones.add(crearOpcion("Sandwich", btnIrSandwich));
-        panelOpciones.add(crearOpcion("Menu", btnIrMenu));
-
-        add(panelOpciones, BorderLayout.CENTER);
-
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        btnRegresar.setPreferredSize(new Dimension(110, 30));
         btnRegresar.addActionListener(e -> regresar());
-        panelBotones.add(btnRegresar);
-        panelBotones.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        add(panelBotones, BorderLayout.SOUTH);
+        panelTarjetas.add(crearTarjetaModulo("Categorías", btnIrCategoria));
+        panelTarjetas.add(crearTarjetaModulo("Productos", btnIrProducto));
+        panelTarjetas.add(crearTarjetaModulo("Sándwiches", btnIrSandwich));
+        panelTarjetas.add(crearTarjetaModulo("Combos", btnIrMenu));
+
+        panelPrincipal.add(panelTarjetas, BorderLayout.CENTER);
+
+        JPanel panelInferior = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        panelInferior.setOpaque(false);
+        panelInferior.add(btnRegresar);
+        panelPrincipal.add(panelInferior, BorderLayout.SOUTH);
+
+        add(panelPrincipal, BorderLayout.CENTER);
     }
 
-    private JPanel crearOpcion(String nombre, JButton boton) {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        JLabel etiqueta = new JLabel(nombre);
-        etiqueta.setFont(new Font("SansSerif", Font.BOLD, 18));
-        etiqueta.setPreferredSize(new Dimension(120, 30));
-        panel.add(etiqueta);
-        panel.add(boton);
-        return panel;
+    private JPanel crearTarjetaModulo(String titulo, JButton botonAccion) {
+        FabricaDaisyUI.PanelTarjeta tarjeta = new FabricaDaisyUI.PanelTarjeta(new BorderLayout(8, 14));
+
+        JLabel lblTit = new JLabel(titulo);
+        lblTit.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        lblTit.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #0f172a; [dark]foreground: #f8f8f2");
+
+        tarjeta.add(lblTit, BorderLayout.NORTH);
+
+        JPanel panelBoton = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        panelBoton.setOpaque(false);
+        panelBoton.add(botonAccion);
+        tarjeta.add(panelBoton, BorderLayout.SOUTH);
+
+        return tarjeta;
     }
 
     private void abrirCategoria() {

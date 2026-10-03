@@ -4,9 +4,12 @@ import model.Categorias;
 import model.Productos;
 import service.CategoriaService;
 import service.ProductoService;
+import vista.util.FabricaDaisyUI;
+import vista.util.TemaGestor;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -20,20 +23,20 @@ public class ProductoView extends JFrame {
     private final CategoriaService categoriaService;
 
     private final Window parent;
+    private Integer idProductoSeleccionado = null;
 
     private final JButton btnAgregar = new JButton("Agregar");
     private final JButton btnModificar = new JButton("Modificar");
     private final JButton btnEliminar = new JButton("Eliminar");
     private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnRegresar = new JButton("Regresar");
+    private final JButton btnRegresar = new JButton("← Volver");
 
-    private final JTextField txtId = new JTextField();
     private final JTextField txtCodigo = new JTextField();
     private final JTextField txtNombre = new JTextField();
     private final JTextField txtPrecio = new JTextField();
     private final JTextField txtExistencia = new JTextField();
     private final JComboBox<String> cmbCategoria = new JComboBox<>();
-    private final JComboBox<String> cmbActivo = new JComboBox<>(new String[]{"A", "I"});
+    private final JComboBox<String> cmbActivo = new JComboBox<>(new String[]{"Activo", "Inactivo"});
 
     private final List<Integer> idsCategoria = new ArrayList<>();
     private final Map<Integer, String> nombresCategoria = new HashMap<>();
@@ -44,9 +47,9 @@ public class ProductoView extends JFrame {
             super.paint(g);
             if (getRowCount() == 0) {
                 Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(Color.GRAY);
+                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
                 FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin datos registrados";
+                String mensaje = "Sin productos registrados";
                 int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
                 int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
                 g2.drawString(mensaje, x, y);
@@ -68,42 +71,106 @@ public class ProductoView extends JFrame {
         iniciarComponentes();
         cargarCategorias();
         cargarTabla();
+        actualizarEstadoBotones(false);
     }
 
     private void iniciarComponentes() {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(1000, 600);
+        setSize(1140, 740);
+        setMinimumSize(new Dimension(1060, 660));
         setLocationRelativeTo(parent);
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(14, 14));
+        getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
 
-        JPanel panelFormulario = new JPanel(new GridLayout(0, 3, 10, 10));
-        panelFormulario.setBorder(BorderFactory.createTitledBorder("Datos del Producto"));
+        JPanel panelContenedorPrincipal = new JPanel(new BorderLayout(12, 12));
+        panelContenedorPrincipal.setBorder(BorderFactory.createEmptyBorder(12, 18, 12, 18));
+        panelContenedorPrincipal.setOpaque(false);
 
-        txtId.setEditable(false);
-        txtId.setPreferredSize(new Dimension(200, 25));
-        txtCodigo.setPreferredSize(new Dimension(200, 25));
-        txtNombre.setPreferredSize(new Dimension(200, 25));
+        JPanel panelCamposFormulario = new JPanel(new GridLayout(2, 3, 14, 10));
+        panelCamposFormulario.setOpaque(false);
+
+        txtCodigo.setPreferredSize(new Dimension(140, 36));
+        txtNombre.setPreferredSize(new Dimension(220, 36));
         txtPrecio.setText("0.00");
-        txtPrecio.setPreferredSize(new Dimension(200, 25));
+        txtPrecio.setPreferredSize(new Dimension(140, 36));
         txtExistencia.setText("0.00");
-        txtExistencia.setPreferredSize(new Dimension(200, 25));
+        txtExistencia.setPreferredSize(new Dimension(140, 36));
+        cmbCategoria.setPreferredSize(new Dimension(200, 36));
+        cmbActivo.setPreferredSize(new Dimension(140, 36));
 
-        panelFormulario.add(crearCampo("ID:", txtId));
-        panelFormulario.add(crearCampo("Código:", txtCodigo));
-        panelFormulario.add(crearCampo("Categoría:", cmbCategoria));
-        panelFormulario.add(crearCampo("Nombre:", txtNombre));
-        panelFormulario.add(crearCampo("Precio:", txtPrecio));
-        panelFormulario.add(crearCampo("Existencia:", txtExistencia));
-        panelFormulario.add(crearCampo("Activo:", cmbActivo));
+        FabricaDaisyUI.estilizarCampo(txtCodigo);
+        FabricaDaisyUI.estilizarCampo(txtNombre);
+        FabricaDaisyUI.estilizarCampo(txtPrecio);
+        FabricaDaisyUI.estilizarCampo(txtExistencia);
+        FabricaDaisyUI.estilizarCampo(cmbCategoria);
+        FabricaDaisyUI.estilizarCampo(cmbActivo);
 
-        add(panelFormulario, BorderLayout.NORTH);
+        panelCamposFormulario.add(FabricaDaisyUI.crearCampoConEtiqueta("Código:", txtCodigo));
+        panelCamposFormulario.add(FabricaDaisyUI.crearCampoConEtiqueta("Categoría:", cmbCategoria));
+        panelCamposFormulario.add(FabricaDaisyUI.crearCampoConEtiqueta("Estado:", cmbActivo));
+        panelCamposFormulario.add(FabricaDaisyUI.crearCampoConEtiqueta("Nombre:", txtNombre));
+        panelCamposFormulario.add(FabricaDaisyUI.crearCampoConEtiqueta("Precio Unitario (Q):", txtPrecio));
+        panelCamposFormulario.add(FabricaDaisyUI.crearCampoConEtiqueta("Existencia:", txtExistencia));
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        btnAgregar.setPreferredSize(new Dimension(110, 30));
-        btnModificar.setPreferredSize(new Dimension(110, 30));
-        btnEliminar.setPreferredSize(new Dimension(110, 30));
-        btnLimpiar.setPreferredSize(new Dimension(110, 30));
-        btnRegresar.setPreferredSize(new Dimension(110, 30));
+        JPanel tarjetaFormulario = FabricaDaisyUI.crearTarjetaSeccion(
+                "Datos del Producto",
+                panelCamposFormulario
+        );
+
+        panelContenedorPrincipal.add(tarjetaFormulario, BorderLayout.NORTH);
+
+        String[] columnas = {"ID", "Código", "Categoría", "Nombre", "Precio", "Existencia", "Estado"};
+        modeloTabla.setColumnIdentifiers(columnas);
+        tabla.setModel(modeloTabla);
+        FabricaDaisyUI.estilizarTabla(tabla);
+        tabla.getColumnModel().getColumn(6).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
+
+        TableColumnModel colModel = tabla.getColumnModel();
+        colModel.getColumn(0).setPreferredWidth(45);
+        colModel.getColumn(0).setMaxWidth(60);
+        colModel.getColumn(1).setPreferredWidth(90);
+        colModel.getColumn(2).setPreferredWidth(140);
+        colModel.getColumn(3).setPreferredWidth(210);
+        colModel.getColumn(4).setPreferredWidth(90);
+        colModel.getColumn(5).setPreferredWidth(90);
+        colModel.getColumn(6).setPreferredWidth(95);
+
+        tabla.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                seleccionarFila();
+            }
+        });
+
+        JScrollPane scrollTabla = new JScrollPane(tabla);
+        scrollTabla.setBorder(BorderFactory.createEmptyBorder());
+
+        JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
+            cargarCategorias();
+            cargarTabla();
+        });
+
+        JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccionConBoton(
+                "Productos Registrados",
+                btnRefrescar,
+                scrollTabla
+        );
+        panelContenedorPrincipal.add(tarjetaTabla, BorderLayout.CENTER);
+
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 12));
+        panelBotones.setBorder(BorderFactory.createEmptyBorder(4, 16, 14, 16));
+        panelBotones.setOpaque(false);
+
+        btnAgregar.setPreferredSize(new Dimension(135, 38));
+        btnModificar.setPreferredSize(new Dimension(135, 38));
+        btnEliminar.setPreferredSize(new Dimension(135, 38));
+        btnLimpiar.setPreferredSize(new Dimension(130, 38));
+        btnRegresar.setPreferredSize(new Dimension(130, 38));
+
+        FabricaDaisyUI.aplicarBotonPrimario(btnAgregar);
+        FabricaDaisyUI.aplicarBotonSecundario(btnModificar);
+        FabricaDaisyUI.aplicarBotonPeligro(btnEliminar);
+        FabricaDaisyUI.aplicarBotonNeutral(btnLimpiar);
+        FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
         btnAgregar.addActionListener(e -> guardarProducto());
         btnModificar.addActionListener(e -> actualizarProducto());
@@ -116,37 +183,15 @@ public class ProductoView extends JFrame {
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
         panelBotones.add(btnRegresar);
-        panelBotones.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        JPanel panelTabla = new JPanel(new BorderLayout());
-        panelTabla.setBorder(BorderFactory.createTitledBorder("Listado de Productos"));
-
-        String[] columnas = {"ID", "Código", "Categoría", "Nombre", "Precio", "Existencia", "Activo"};
-        modeloTabla.setColumnIdentifiers(columnas);
-        tabla.setModel(modeloTabla);
-        tabla.setFillsViewportHeight(true);
-        tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        tabla.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                seleccionarFila();
-            }
-        });
-
-        panelTabla.add(new JScrollPane(tabla), BorderLayout.CENTER);
-
-        JPanel panelCentral = new JPanel(new BorderLayout(10, 10));
-        panelCentral.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
-        panelCentral.add(panelBotones, BorderLayout.NORTH);
-        panelCentral.add(panelTabla, BorderLayout.CENTER);
-
-        add(panelCentral, BorderLayout.CENTER);
+        add(panelContenedorPrincipal, BorderLayout.CENTER);
+        add(panelBotones, BorderLayout.SOUTH);
     }
 
-    private JPanel crearCampo(String etiqueta, JComponent componente) {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.add(new JLabel(etiqueta), BorderLayout.NORTH);
-        panel.add(componente, BorderLayout.CENTER);
-        return panel;
+    private void actualizarEstadoBotones(boolean seleccionActiva) {
+        btnAgregar.setEnabled(!seleccionActiva);
+        btnModificar.setEnabled(seleccionActiva);
+        btnEliminar.setEnabled(seleccionActiva);
     }
 
     private void cargarCategorias() {
@@ -161,7 +206,7 @@ public class ProductoView extends JFrame {
                 nombresCategoria.put(c.getIdCat(), c.getNombreCat());
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudieron cargar las categorias: " + ex.getMessage(),
+            JOptionPane.showMessageDialog(this, "No se pudieron cargar las categorías: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -174,11 +219,11 @@ public class ProductoView extends JFrame {
                 modeloTabla.addRow(new Object[]{
                         p.getIdPro(),
                         p.getCodigoPro(),
-                        nombresCategoria.getOrDefault(p.getIdCatPro(), "Sin categoria"),
+                        nombresCategoria.getOrDefault(p.getIdCatPro(), "Sin categoría"),
                         p.getNombrePro(),
                         p.getPrecioPro(),
                         p.getExistenciaPro(),
-                        p.getActivoPro()
+                        "A".equalsIgnoreCase(p.getActivoPro()) ? "ACTIVO" : "INACTIVO"
                 });
             }
         } catch (RuntimeException ex) {
@@ -190,15 +235,18 @@ public class ProductoView extends JFrame {
     private void seleccionarFila() {
         int fila = tabla.getSelectedRow();
         if (fila == -1) {
+            actualizarEstadoBotones(false);
             return;
         }
-        txtId.setText(String.valueOf(modeloTabla.getValueAt(fila, 0)));
+        idProductoSeleccionado = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(fila, 0)));
         txtCodigo.setText(String.valueOf(modeloTabla.getValueAt(fila, 1)));
         seleccionarCategoria(String.valueOf(modeloTabla.getValueAt(fila, 2)));
         txtNombre.setText(String.valueOf(modeloTabla.getValueAt(fila, 3)));
         txtPrecio.setText(String.valueOf(modeloTabla.getValueAt(fila, 4)));
         txtExistencia.setText(String.valueOf(modeloTabla.getValueAt(fila, 5)));
-        cmbActivo.setSelectedItem(String.valueOf(modeloTabla.getValueAt(fila, 6)));
+        String activoFila = String.valueOf(modeloTabla.getValueAt(fila, 6));
+        cmbActivo.setSelectedItem("ACTIVO".equalsIgnoreCase(activoFila) ? "Activo" : "Inactivo");
+        actualizarEstadoBotones(true);
     }
 
     private void seleccionarCategoria(String nombre) {
@@ -214,14 +262,23 @@ public class ProductoView extends JFrame {
         if (!validarFormulario()) {
             return;
         }
+        String codigo = txtCodigo.getText().trim();
+        for (Productos p : productoService.listar()) {
+            if (p.getCodigoPro().equalsIgnoreCase(codigo)) {
+                JOptionPane.showMessageDialog(this,
+                        "Ya existe un producto con el código '" + codigo + "'. Use el botón 'Modificar' para actualizar el registro existente.",
+                        "Código Duplicado", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
         try {
             Productos producto = new Productos();
-            producto.setCodigoPro(txtCodigo.getText().trim());
+            producto.setCodigoPro(codigo);
             producto.setIdCatPro(categoriaSeleccionadaId());
             producto.setNombrePro(txtNombre.getText().trim());
             producto.setPrecioPro(leerDecimal(txtPrecio.getText()));
             producto.setExistenciaPro(leerDecimal(txtExistencia.getText()));
-            producto.setActivoPro((String) cmbActivo.getSelectedItem());
+            producto.setActivoPro("Activo".equals(cmbActivo.getSelectedItem()) ? "A" : "I");
 
             productoService.insertar(producto);
             JOptionPane.showMessageDialog(this, "Producto guardado correctamente.");
@@ -235,22 +292,31 @@ public class ProductoView extends JFrame {
     }
 
     private void actualizarProducto() {
-        if (txtId.getText().isEmpty()) {
+        if (idProductoSeleccionado == null) {
             JOptionPane.showMessageDialog(this, "Seleccione un producto de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
         if (!validarFormulario()) {
             return;
         }
+        String codigo = txtCodigo.getText().trim();
+        for (Productos p : productoService.listar()) {
+            if (p.getCodigoPro().equalsIgnoreCase(codigo) && p.getIdPro() != idProductoSeleccionado) {
+                JOptionPane.showMessageDialog(this,
+                        "Ya existe otro producto con el código '" + codigo + "'. Ingrese un código único.",
+                        "Código Duplicado", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
         try {
             Productos producto = new Productos();
-            producto.setIdPro(Integer.parseInt(txtId.getText()));
-            producto.setCodigoPro(txtCodigo.getText().trim());
+            producto.setIdPro(idProductoSeleccionado);
+            producto.setCodigoPro(codigo);
             producto.setIdCatPro(categoriaSeleccionadaId());
             producto.setNombrePro(txtNombre.getText().trim());
             producto.setPrecioPro(leerDecimal(txtPrecio.getText()));
             producto.setExistenciaPro(leerDecimal(txtExistencia.getText()));
-            producto.setActivoPro((String) cmbActivo.getSelectedItem());
+            producto.setActivoPro("Activo".equals(cmbActivo.getSelectedItem()) ? "A" : "I");
 
             productoService.actualizar(producto);
             JOptionPane.showMessageDialog(this, "Producto actualizado correctamente.");
@@ -264,14 +330,15 @@ public class ProductoView extends JFrame {
     }
 
     private void eliminarProducto() {
-        if (txtId.getText().isEmpty()) {
+        if (idProductoSeleccionado == null) {
             JOptionPane.showMessageDialog(this, "Seleccione un producto de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
         int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar el producto seleccionado?", "Confirmar", JOptionPane.YES_NO_OPTION);
         if (confirmar == JOptionPane.YES_OPTION) {
             try {
-                productoService.eliminar(Integer.parseInt(txtId.getText()));
+                productoService.eliminar(idProductoSeleccionado);
+                JOptionPane.showMessageDialog(this, "Producto eliminado correctamente.");
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
@@ -281,12 +348,12 @@ public class ProductoView extends JFrame {
     }
 
     private boolean validarFormulario() {
-        if (cmbCategoria.getSelectedIndex() == -1) {
-            JOptionPane.showMessageDialog(this, "Debe haber al menos una categoria registrada para el producto.", "Validación", JOptionPane.WARNING_MESSAGE);
+        if (txtCodigo.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "El código es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
             return false;
         }
-        if (txtCodigo.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El código del producto es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+        if (cmbCategoria.getSelectedIndex() == -1) {
+            JOptionPane.showMessageDialog(this, "Seleccione una categoría.", "Validación", JOptionPane.WARNING_MESSAGE);
             return false;
         }
         if (txtNombre.getText().trim().isEmpty()) {
@@ -294,41 +361,56 @@ public class ProductoView extends JFrame {
             return false;
         }
         try {
-            if (leerDecimal(txtPrecio.getText()).compareTo(BigDecimal.ZERO) < 0) {
+            BigDecimal precio = new BigDecimal(txtPrecio.getText().trim());
+            if (precio.compareTo(BigDecimal.ZERO) < 0) {
                 JOptionPane.showMessageDialog(this, "El precio no puede ser negativo.", "Validación", JOptionPane.WARNING_MESSAGE);
                 return false;
             }
-            if (leerDecimal(txtExistencia.getText()).compareTo(BigDecimal.ZERO) < 0) {
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
+            return false;
+        }
+        try {
+            BigDecimal existencia = new BigDecimal(txtExistencia.getText().trim());
+            if (existencia.compareTo(BigDecimal.ZERO) < 0) {
                 JOptionPane.showMessageDialog(this, "La existencia no puede ser negativa.", "Validación", JOptionPane.WARNING_MESSAGE);
                 return false;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio y la existencia deben ser números válidos.", "Validación", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "La existencia debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
             return false;
         }
         return true;
     }
 
     private int categoriaSeleccionadaId() {
-        return idsCategoria.get(cmbCategoria.getSelectedIndex());
+        int index = cmbCategoria.getSelectedIndex();
+        if (index >= 0 && index < idsCategoria.size()) {
+            return idsCategoria.get(index);
+        }
+        return 1;
     }
 
-    private BigDecimal leerDecimal(String texto) {
-        String valor = texto.trim();
-        if (valor.isEmpty()) {
+    private BigDecimal leerDecimal(String valor) {
+        String limpio = valor.trim();
+        if (limpio.isEmpty()) {
             return BigDecimal.ZERO;
         }
-        return new BigDecimal(valor);
+        return new BigDecimal(limpio);
     }
 
     private void limpiarFormulario() {
-        txtId.setText("");
+        idProductoSeleccionado = null;
         txtCodigo.setText("");
         txtNombre.setText("");
         txtPrecio.setText("0.00");
         txtExistencia.setText("0.00");
-        cmbActivo.setSelectedItem("A");
+        if (cmbCategoria.getItemCount() > 0) {
+            cmbCategoria.setSelectedIndex(0);
+        }
+        cmbActivo.setSelectedItem("Activo");
         tabla.clearSelection();
+        actualizarEstadoBotones(false);
     }
 
     private void regresar() {

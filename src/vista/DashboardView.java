@@ -1,132 +1,243 @@
 package vista;
 
 import model.Cliente;
+import model.Pedidos;
 import service.ClienteService;
+import service.PedidoService;
+import vista.util.FabricaDaisyUI;
+import vista.util.TemaGestor;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.math.BigDecimal;
 import java.util.List;
 
 public class DashboardView extends JFrame {
 
     private final ClienteService clienteService;
+    private final PedidoService pedidoService;
 
-    private final JTextField txtId = new JTextField();
-    private final JTextField txtNombre = new JTextField();
-    private final JTextField txtDpi = new JTextField();
+    private final JLabel lblTotalClientes = new JLabel("0");
+    private final JLabel lblTotalPedidos = new JLabel("0");
+    private final JLabel lblTotalPuntos = new JLabel("0");
 
-    private final JButton btnSeleccionar = new JButton("Seleccionar");
-    private final JButton btnPedido = new JButton("Nuevo Pedido");
-    private final JButton btnAdministracion = new JButton("Administracion");
-    private final JButton btnAdministracionCliente = new JButton("Administracion Cliente");
+    private final JTextField txtBuscar = FabricaDaisyUI.crearCampoTexto("Buscar cliente por DPI o nombre...", 25);
+    private final JComboBox<String> cmbTemas = new JComboBox<>(TemaGestor.obtenerNombresTemas());
 
-    private final JLabel lblEstado = new JLabel("Cliente seleccionado: (ninguno)");
+    private final JLabel lblEstadoSeleccion = new JLabel("Seleccione un cliente para iniciar un pedido");
+    private final JButton btnPedido = FabricaDaisyUI.crearBotonPrimario("+ Nuevo Pedido", e -> abrirPedido());
 
-    private final JTable tabla = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin datos registrados";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloTabla = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tabla = new JTable(modeloTabla);
+    private TableRowSorter<DefaultTableModel> clasificador;
 
     private Cliente clienteSeleccionado;
 
     public DashboardView() {
-        super("Dashboard");
+        super("Sistema de Ventas");
         this.clienteService = new ClienteService();
+        this.pedidoService = new PedidoService();
         this.clienteSeleccionado = null;
+
         iniciarComponentes();
+        cargarMetricas();
         cargarTabla();
     }
 
     private void iniciarComponentes() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(900, 600);
+        setSize(1180, 780);
+        setMinimumSize(new Dimension(1080, 700));
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(16, 16));
+        getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
 
-        JPanel panelFormulario = new JPanel(new GridLayout(0, 3, 10, 10));
-        panelFormulario.setBorder(BorderFactory.createTitledBorder("Cliente seleccionado"));
+        JPanel panelSuperior = new JPanel(new BorderLayout(12, 12));
+        panelSuperior.setBorder(new EmptyBorder(16, 24, 10, 24));
+        panelSuperior.setOpaque(false);
 
-        txtId.setEditable(false);
-        txtId.setPreferredSize(new Dimension(200, 25));
-        txtNombre.setEditable(false);
-        txtNombre.setPreferredSize(new Dimension(200, 25));
-        txtDpi.setEditable(false);
-        txtDpi.setPreferredSize(new Dimension(200, 25));
+        JLabel lblTitulo = new JLabel("Punto de Venta");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        lblTitulo.putClientProperty("FlatLaf.style", "[light]foreground: #0f172a; [dark]foreground: #f8f8f2");
 
-        panelFormulario.add(crearCampo("ID:", txtId));
-        panelFormulario.add(crearCampo("Nombre:", txtNombre));
-        panelFormulario.add(crearCampo("DPI:", txtDpi));
+        JPanel panelTemaSelector = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
+        panelTemaSelector.setOpaque(false);
+        JLabel lblTemaEti = new JLabel("Tema:");
+        lblTemaEti.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblTemaEti.putClientProperty("FlatLaf.style", "[light]foreground: #475569; [dark]foreground: #f8f8f2");
 
-        add(panelFormulario, BorderLayout.NORTH);
+        cmbTemas.setSelectedItem(TemaGestor.getTemaActual());
+        cmbTemas.setPreferredSize(new Dimension(180, 34));
+        FabricaDaisyUI.estilizarCampo(cmbTemas);
+        cmbTemas.addActionListener(e -> {
+            String seleccionado = (String) cmbTemas.getSelectedItem();
+            if (seleccionado != null && !seleccionado.equals(TemaGestor.getTemaActual())) {
+                TemaGestor.aplicarTema(seleccionado);
+            }
+        });
+        panelTemaSelector.add(lblTemaEti);
+        panelTemaSelector.add(cmbTemas);
 
-        JPanel panelTabla = new JPanel(new BorderLayout());
-        panelTabla.setBorder(BorderFactory.createTitledBorder("Seleccion de clientes"));
+        panelSuperior.add(lblTitulo, BorderLayout.WEST);
+        panelSuperior.add(panelTemaSelector, BorderLayout.EAST);
 
-        String[] columnas = {"ID", "DPI", "Nombre", "Saldo Puntos", "Estado"};
-        modeloTabla.setColumnIdentifiers(columnas);
-        tabla.setModel(modeloTabla);
-        tabla.setFillsViewportHeight(true);
-        tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        tabla.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                seleccionarFila();
+        JPanel panelMetricas = new JPanel(new GridLayout(1, 3, 18, 0));
+        panelMetricas.setBorder(new EmptyBorder(4, 24, 12, 24));
+        panelMetricas.setOpaque(false);
+
+        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Clientes", lblTotalClientes, new Color(16, 185, 129), new Color(80, 250, 123)));
+        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Pedidos", lblTotalPedidos, new Color(99, 102, 241), new Color(139, 233, 253)));
+        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Puntos", lblTotalPuntos, new Color(217, 119, 6), new Color(241, 250, 140)));
+
+        JPanel panelNorte = new JPanel(new BorderLayout());
+        panelNorte.setOpaque(false);
+        panelNorte.add(panelSuperior, BorderLayout.NORTH);
+        panelNorte.add(panelMetricas, BorderLayout.SOUTH);
+        add(panelNorte, BorderLayout.NORTH);
+
+        JPanel panelCentro = new JPanel(new BorderLayout(10, 10));
+        panelCentro.setBorder(new EmptyBorder(2, 24, 8, 24));
+        panelCentro.setOpaque(false);
+
+        JPanel panelFiltro = new JPanel(new BorderLayout(12, 8));
+        panelFiltro.setBorder(new EmptyBorder(0, 0, 10, 0));
+        panelFiltro.setOpaque(false);
+
+        JPanel panelBuscador = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        panelBuscador.setOpaque(false);
+        JLabel lblLupa = new JLabel("Buscar:");
+        lblLupa.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblLupa.putClientProperty("FlatLaf.style", "[light]foreground: #475569; [dark]foreground: #f8f8f2");
+
+        txtBuscar.setPreferredSize(new Dimension(360, 36));
+        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filtrarTabla();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filtrarTabla();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filtrarTabla();
             }
         });
 
-        panelTabla.add(new JScrollPane(tabla), BorderLayout.CENTER);
+        panelBuscador.add(lblLupa);
+        panelBuscador.add(txtBuscar);
 
-        JPanel panelInferior = new JPanel(new BorderLayout(10, 10));
-        panelInferior.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
+        lblEstadoSeleccion.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblEstadoSeleccion.putClientProperty("FlatLaf.style", "[light]foreground: #64748b; [dark]foreground: #bd93f9");
 
-        lblEstado.setBorder(BorderFactory.createEmptyBorder(0, 5, 10, 5));
-        panelInferior.add(lblEstado, BorderLayout.NORTH);
+        panelFiltro.add(panelBuscador, BorderLayout.WEST);
+        panelFiltro.add(lblEstadoSeleccion, BorderLayout.EAST);
+        panelCentro.add(panelFiltro, BorderLayout.NORTH);
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        btnSeleccionar.setPreferredSize(new Dimension(130, 30));
-        btnPedido.setPreferredSize(new Dimension(140, 30));
-        btnAdministracion.setPreferredSize(new Dimension(150, 30));
-        btnAdministracionCliente.setPreferredSize(new Dimension(200, 30));
+        String[] columnas = {"ID", "DPI", "Nombre", "Dirección", "Teléfono", "Puntos acumulados", "Estado"};
+        modeloTabla.setColumnIdentifiers(columnas);
+        clasificador = new TableRowSorter<>(modeloTabla);
+        tabla.setRowSorter(clasificador);
+        FabricaDaisyUI.estilizarTabla(tabla);
+        tabla.getColumnModel().getColumn(6).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
 
-        btnSeleccionar.addActionListener(e -> confirmarSeleccion());
-        btnPedido.addActionListener(e -> abrirPedido());
-        btnAdministracion.addActionListener(e -> abrirAdministracion());
-        btnAdministracionCliente.addActionListener(e -> abrirAdministracionCliente());
+        TableColumnModel colModel = tabla.getColumnModel();
+        colModel.getColumn(0).setPreferredWidth(50);
+        colModel.getColumn(0).setMaxWidth(70);
+        colModel.getColumn(1).setPreferredWidth(140);
+        colModel.getColumn(2).setPreferredWidth(210);
+        colModel.getColumn(3).setPreferredWidth(240);
+        colModel.getColumn(4).setPreferredWidth(110);
+        colModel.getColumn(5).setPreferredWidth(95);
+        colModel.getColumn(6).setPreferredWidth(105);
 
-        panelBotones.add(btnSeleccionar);
-        panelBotones.add(btnPedido);
-        panelBotones.add(btnAdministracion);
-        panelBotones.add(btnAdministracionCliente);
-        panelBotones.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        tabla.getSelectionModel().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                seleccionarClienteDeFila();
+            }
+        });
 
-        panelInferior.add(panelBotones, BorderLayout.CENTER);
+        tabla.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    abrirPedido();
+                }
+            }
+        });
+
+        JScrollPane scrollTabla = new JScrollPane(tabla);
+        scrollTabla.setBorder(BorderFactory.createEmptyBorder());
+
+        JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
+            cargarMetricas();
+            cargarTabla();
+        });
+
+        JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccionConBoton("Clientes", btnRefrescar, scrollTabla);
+
+        panelCentro.add(tarjetaTabla, BorderLayout.CENTER);
+        add(panelCentro, BorderLayout.CENTER);
+
+        JPanel panelInferior = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 14));
+        panelInferior.setOpaque(false);
+        panelInferior.putClientProperty("FlatLaf.style", "[light]border: 1,0,0,0,#e2e8f0; [dark]border: 1,0,0,0,#44475a");
+
+        btnPedido.setEnabled(false);
+        JButton btnPagos = FabricaDaisyUI.crearBotonSecundario("Cobros y Facturación", e -> abrirPagos());
+        JButton btnClientes = FabricaDaisyUI.crearBotonAcento("Clientes", e -> abrirAdministracionCliente());
+        JButton btnCatalogos = FabricaDaisyUI.crearBotonNeutral("Administración", e -> abrirAdministracion());
+        JButton btnSalir = FabricaDaisyUI.crearBotonPeligro("Salir", e -> System.exit(0));
+
+        btnPedido.setPreferredSize(new Dimension(160, 38));
+        btnPagos.setPreferredSize(new Dimension(195, 38));
+        btnClientes.setPreferredSize(new Dimension(135, 38));
+        btnCatalogos.setPreferredSize(new Dimension(135, 38));
+        btnSalir.setPreferredSize(new Dimension(110, 38));
+
+        panelInferior.add(btnPedido);
+        panelInferior.add(btnPagos);
+        panelInferior.add(btnClientes);
+        panelInferior.add(btnCatalogos);
+        panelInferior.add(btnSalir);
 
         add(panelInferior, BorderLayout.SOUTH);
-        add(panelTabla, BorderLayout.CENTER);
     }
 
-    private JPanel crearCampo(String etiqueta, JComponent componente) {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.add(new JLabel(etiqueta), BorderLayout.NORTH);
-        panel.add(componente, BorderLayout.CENTER);
-        return panel;
+    private void cargarMetricas() {
+        try {
+            List<Cliente> clientes = clienteService.listar();
+            List<Pedidos> pedidos = pedidoService.listar();
+
+            lblTotalClientes.setText(String.valueOf(clientes.size()));
+            lblTotalPedidos.setText(String.valueOf(pedidos.size()));
+
+            BigDecimal puntosTotales = BigDecimal.ZERO;
+            for (Cliente c : clientes) {
+                if (c.getSaldoPuntoCli() != null) {
+                    puntosTotales = puntosTotales.add(c.getSaldoPuntoCli());
+                }
+            }
+            lblTotalPuntos.setText(puntosTotales.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString() + " pts");
+        } catch (RuntimeException ex) {
+            lblTotalClientes.setText("0");
+            lblTotalPedidos.setText("0");
+            lblTotalPuntos.setText("0 pts");
+        }
     }
 
     private void cargarTabla() {
@@ -138,8 +249,10 @@ public class DashboardView extends JFrame {
                         c.getIdCli(),
                         c.getDpiCli(),
                         c.getNombreCli(),
+                        c.getDireccionCli(),
+                        c.getTelefonoCli(),
                         c.getSaldoPuntoCli(),
-                        c.getEstadoCli()
+                        "A".equalsIgnoreCase(c.getEstadoCli()) ? "ACTIVO" : "INACTIVO"
                 });
             }
         } catch (RuntimeException ex) {
@@ -148,46 +261,47 @@ public class DashboardView extends JFrame {
         }
     }
 
-    private void seleccionarFila() {
-        int fila = tabla.getSelectedRow();
-        if (fila == -1) {
-            return;
+    private void filtrarTabla() {
+        String texto = txtBuscar.getText().trim();
+        if (texto.isEmpty()) {
+            clasificador.setRowFilter(null);
+        } else {
+            clasificador.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(texto)));
         }
-        txtId.setText(String.valueOf(modeloTabla.getValueAt(fila, 0)));
-        txtDpi.setText(String.valueOf(modeloTabla.getValueAt(fila, 1)));
-        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(fila, 2)));
     }
 
-    private void confirmarSeleccion() {
+    private void seleccionarClienteDeFila() {
         int fila = tabla.getSelectedRow();
         if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione un cliente de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            clienteSeleccionado = null;
+            btnPedido.setEnabled(false);
+            lblEstadoSeleccion.setText("Seleccione un cliente para iniciar un pedido");
+            lblEstadoSeleccion.putClientProperty("FlatLaf.style", "[light]foreground: #64748b; [dark]foreground: #bd93f9");
             return;
         }
-        try {
-            clienteSeleccionado = clienteService.buscarClientePorId(Integer.parseInt(txtId.getText().trim()));
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El ID del cliente no es valido.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al buscar el cliente: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        int filaModelo = tabla.convertRowIndexToModel(fila);
+        int idCli = (int) modeloTabla.getValueAt(filaModelo, 0);
+        clienteSeleccionado = clienteService.buscarClientePorId(idCli);
 
-        if (clienteSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "El cliente ya no existe en la base de datos.", "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
+        if (clienteSeleccionado != null) {
+            btnPedido.setEnabled(true);
+            lblEstadoSeleccion.setText("✓ " + clienteSeleccionado.getNombreCli());
+            lblEstadoSeleccion.putClientProperty("FlatLaf.style", "[light]foreground: #059669; [dark]foreground: #50fa7b");
         }
-
-        lblEstado.setText("Cliente seleccionado: " + clienteSeleccionado.getIdCli()
-                + " - " + clienteSeleccionado.getNombreCli()
-                + " (DPI " + clienteSeleccionado.getDpiCli() + ")");
-        lblEstado.setForeground(new Color(0, 128, 0));
     }
 
     private void abrirPedido() {
+        if (clienteSeleccionado == null) {
+            JOptionPane.showMessageDialog(this, "Por favor seleccione un cliente de la tabla antes de iniciar un pedido.",
+                    "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         PedidoView ventana = new PedidoView(this, clienteSeleccionado);
         ventana.setVisible(true);
+    }
+
+    private void abrirPagos() {
+        new PagoView(this).setVisible(true);
     }
 
     private void abrirAdministracion() {

@@ -28,5 +28,13 @@ bin/
 .vscode/
 .idea/
 
+### Credentials & Local Env ###
+*.env
+*.local
+credentials.json
+*.log
+*.tmp
+*.bak
+
 ### Mac OS ###
 .DS_Store

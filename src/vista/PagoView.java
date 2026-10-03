@@ -6,11 +6,14 @@ import model.Pedidos;
 import service.ClienteService;
 import service.PagoService;
 import service.PedidoService;
+import vista.util.FabricaDaisyUI;
+import vista.util.TemaGestor;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -26,25 +29,26 @@ public class PagoView extends JFrame {
 
     private final Window parent;
     private final Pedidos pedidoInicial;
+    private Integer idPagoSeleccionado = null;
 
-    private final JTextField txtIdPago = new JTextField();
     private final JComboBox<String> cmbPedido = new JComboBox<>();
     private final JTextField txtCliente = new JTextField();
     private final JTextField txtTotalPagar = new JTextField();
-    private final JComboBox<String> cmbMetodoPago = new JComboBox<>(new String[]{"EF", "TC", "TR"});
+    private final JComboBox<String> cmbMetodoPago = new JComboBox<>(new String[]{"Efectivo", "Tarjeta Crédito/Débito", "Transferencia"});
     private final JTextField txtMontoRecibido = new JTextField();
     private final JTextField txtCambio = new JTextField();
     private final JTextField txtReferencia = new JTextField();
-    private final JComboBox<String> cmbEstadoPago = new JComboBox<>(new String[]{"P", "A"});
 
     private final JButton btnProcesar = new JButton("Procesar Pago");
+    private final JButton btnVerFactura = new JButton("Ver Factura");
     private final JButton btnEliminar = new JButton("Eliminar");
     private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnRegresar = new JButton("Regresar");
+    private final JButton btnRegresar = new JButton("← Volver");
 
     private final List<Integer> idsPedido = new ArrayList<>();
     private final List<BigDecimal> totalesPedido = new ArrayList<>();
     private final List<Integer> idsClientePedido = new ArrayList<>();
+    private final List<String> estadosPedido = new ArrayList<>();
 
     private final DateTimeFormatter formateadorFecha = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -54,9 +58,9 @@ public class PagoView extends JFrame {
             super.paint(g);
             if (getRowCount() == 0) {
                 Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(Color.GRAY);
+                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
                 FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin datos registrados";
+                String mensaje = "Sin pagos registrados";
                 int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
                 int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
                 g2.drawString(mensaje, x, y);
@@ -79,7 +83,7 @@ public class PagoView extends JFrame {
     }
 
     public PagoView(Window parent, Pedidos pedidoInicial) {
-        super("Gestión y Cobro de Pagos");
+        super("Gestión y Cobro de Pedidos");
         this.parent = parent;
         this.pedidoInicial = pedidoInicial;
         this.pagoService = new PagoService();
@@ -90,33 +94,36 @@ public class PagoView extends JFrame {
         cargarPedidos();
         cargarTablaPagos();
         seleccionarPedidoInicial();
+        actualizarEstadoBotones(false);
     }
 
     private void iniciarComponentes() {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(1050, 680);
+        setSize(1200, 800);
+        setMinimumSize(new Dimension(1120, 720));
         setLocationRelativeTo(parent);
-        setLayout(new BorderLayout(10, 10));
+        setLayout(new BorderLayout(12, 12));
+        getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
 
-        JPanel panelFormulario = new JPanel(new GridLayout(0, 4, 10, 10));
-        panelFormulario.setBorder(BorderFactory.createTitledBorder("Datos del Cobro / Pago"));
+        JPanel panelContenedorPrincipal = new JPanel(new BorderLayout(12, 12));
+        panelContenedorPrincipal.setBorder(BorderFactory.createEmptyBorder(12, 18, 12, 18));
+        panelContenedorPrincipal.setOpaque(false);
 
-        txtIdPago.setEditable(false);
-        txtIdPago.setPreferredSize(new Dimension(150, 25));
+        JPanel panelCamposCobro = new JPanel(new GridLayout(2, 4, 14, 10));
+        panelCamposCobro.setOpaque(false);
 
-        txtCliente.setEditable(false);
-        txtCliente.setPreferredSize(new Dimension(200, 25));
-
-        txtTotalPagar.setEditable(false);
+        txtCliente.setPreferredSize(new Dimension(220, 36));
         txtTotalPagar.setText("0.00");
-        txtTotalPagar.setPreferredSize(new Dimension(150, 25));
-
-        txtCambio.setEditable(false);
+        txtTotalPagar.setPreferredSize(new Dimension(140, 36));
         txtCambio.setText("0.00");
-        txtCambio.setPreferredSize(new Dimension(150, 25));
+        txtCambio.setPreferredSize(new Dimension(140, 36));
+
+        FabricaDaisyUI.aplicarCampoEstatico(txtCliente);
+        FabricaDaisyUI.aplicarCampoEstatico(txtTotalPagar);
+        FabricaDaisyUI.aplicarCampoEstatico(txtCambio);
 
         txtMontoRecibido.setText("0.00");
-        txtMontoRecibido.setPreferredSize(new Dimension(150, 25));
+        txtMontoRecibido.setPreferredSize(new Dimension(140, 36));
         txtMontoRecibido.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
@@ -134,68 +141,113 @@ public class PagoView extends JFrame {
             }
         });
 
-        txtReferencia.setPreferredSize(new Dimension(150, 25));
+        txtReferencia.setPreferredSize(new Dimension(160, 36));
+        cmbMetodoPago.setPreferredSize(new Dimension(180, 36));
 
-        cmbPedido.setPreferredSize(new Dimension(240, 25));
+        cmbPedido.setPreferredSize(new Dimension(280, 36));
         cmbPedido.addActionListener(e -> seleccionarPedidoDeCombo());
 
-        panelFormulario.add(crearCampo("ID Pago:", txtIdPago));
-        panelFormulario.add(crearCampo("Pedido a Cobrar:", cmbPedido));
-        panelFormulario.add(crearCampo("Cliente:", txtCliente));
-        panelFormulario.add(crearCampo("Total a Pagar:", txtTotalPagar));
-        panelFormulario.add(crearCampo("Método de Pago:", cmbMetodoPago));
-        panelFormulario.add(crearCampo("Monto Recibido:", txtMontoRecibido));
-        panelFormulario.add(crearCampo("Cambio / Vuelto:", txtCambio));
-        panelFormulario.add(crearCampo("No. Referencia:", txtReferencia));
+        FabricaDaisyUI.estilizarCampo(cmbPedido);
+        FabricaDaisyUI.estilizarCampo(cmbMetodoPago);
+        FabricaDaisyUI.estilizarCampo(txtMontoRecibido);
+        FabricaDaisyUI.estilizarCampo(txtReferencia);
 
-        add(panelFormulario, BorderLayout.NORTH);
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Pedido:", cmbPedido));
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Cliente:", txtCliente));
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Total a Pagar (Q):", txtTotalPagar));
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Método de Pago:", cmbMetodoPago));
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Monto Recibido (Q):", txtMontoRecibido));
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Cambio (Q):", txtCambio));
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("No. Referencia:", txtReferencia));
 
-        JPanel panelCentral = new JPanel(new BorderLayout(10, 10));
-        panelCentral.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-
-        JPanel panelTabla = new JPanel(new BorderLayout());
-        panelTabla.setBorder(BorderFactory.createTitledBorder("Historial de Pagos"));
+        JPanel tarjetaCobro = FabricaDaisyUI.crearTarjetaSeccion(
+                "Cobro de Pedido",
+                panelCamposCobro
+        );
+        panelContenedorPrincipal.add(tarjetaCobro, BorderLayout.NORTH);
 
         modeloPagos.setColumnIdentifiers(new String[]{"ID Pago", "ID Pedido", "Fecha", "Método", "Monto Recibido", "Cambio", "Referencia", "Estado"});
         tablaPagos.setModel(modeloPagos);
-        tablaPagos.setFillsViewportHeight(true);
-        tablaPagos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        FabricaDaisyUI.estilizarTabla(tablaPagos);
+
+        TableColumnModel colModel = tablaPagos.getColumnModel();
+        colModel.getColumn(0).setPreferredWidth(50);
+        colModel.getColumn(0).setMaxWidth(65);
+        colModel.getColumn(1).setPreferredWidth(65);
+        colModel.getColumn(1).setMaxWidth(80);
+        colModel.getColumn(2).setPreferredWidth(140);
+        colModel.getColumn(3).setPreferredWidth(130);
+        colModel.getColumn(4).setPreferredWidth(110);
+        colModel.getColumn(5).setPreferredWidth(95);
+        colModel.getColumn(6).setPreferredWidth(120);
+        colModel.getColumn(7).setPreferredWidth(95);
+
         tablaPagos.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 seleccionarFilaPago();
             }
         });
+        tablaPagos.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    verFactura();
+                }
+            }
+        });
 
-        panelTabla.add(new JScrollPane(tablaPagos), BorderLayout.CENTER);
-        panelCentral.add(panelTabla, BorderLayout.CENTER);
+        tablaPagos.getColumnModel().getColumn(7).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
 
-        add(panelCentral, BorderLayout.CENTER);
+        JScrollPane scrollPagos = new JScrollPane(tablaPagos);
+        scrollPagos.setBorder(BorderFactory.createEmptyBorder());
 
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        btnProcesar.setPreferredSize(new Dimension(140, 30));
-        btnEliminar.setPreferredSize(new Dimension(110, 30));
-        btnLimpiar.setPreferredSize(new Dimension(110, 30));
-        btnRegresar.setPreferredSize(new Dimension(110, 30));
+        JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
+            cargarPedidos();
+            cargarTablaPagos();
+        });
+
+        JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccionConBoton(
+                "Historial de Pagos",
+                btnRefrescar,
+                scrollPagos
+        );
+        panelContenedorPrincipal.add(tarjetaTabla, BorderLayout.CENTER);
+
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 12));
+        panelBotones.setBorder(BorderFactory.createEmptyBorder(4, 16, 14, 16));
+        panelBotones.setOpaque(false);
+
+        btnProcesar.setPreferredSize(new Dimension(160, 38));
+        btnVerFactura.setPreferredSize(new Dimension(145, 38));
+        btnEliminar.setPreferredSize(new Dimension(135, 38));
+        btnLimpiar.setPreferredSize(new Dimension(130, 38));
+        btnRegresar.setPreferredSize(new Dimension(130, 38));
+
+        FabricaDaisyUI.aplicarBotonPrimario(btnProcesar);
+        FabricaDaisyUI.aplicarBotonAcento(btnVerFactura);
+        FabricaDaisyUI.aplicarBotonPeligro(btnEliminar);
+        FabricaDaisyUI.aplicarBotonNeutral(btnLimpiar);
+        FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
         btnProcesar.addActionListener(e -> procesarCobro());
+        btnVerFactura.addActionListener(e -> verFactura());
         btnEliminar.addActionListener(e -> eliminarPago());
         btnLimpiar.addActionListener(e -> limpiarFormulario());
         btnRegresar.addActionListener(e -> regresar());
 
         panelBotones.add(btnProcesar);
+        panelBotones.add(btnVerFactura);
         panelBotones.add(btnEliminar);
         panelBotones.add(btnLimpiar);
         panelBotones.add(btnRegresar);
-        panelBotones.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
+        add(panelContenedorPrincipal, BorderLayout.CENTER);
         add(panelBotones, BorderLayout.SOUTH);
     }
 
-    private JPanel crearCampo(String etiqueta, JComponent componente) {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-        panel.add(new JLabel(etiqueta), BorderLayout.NORTH);
-        panel.add(componente, BorderLayout.CENTER);
-        return panel;
+    private void actualizarEstadoBotones(boolean seleccionActiva) {
+        btnEliminar.setEnabled(seleccionActiva);
+        btnVerFactura.setEnabled(seleccionActiva || cmbPedido.getSelectedIndex() != -1);
     }
 
     private void cargarPedidos() {
@@ -203,17 +255,20 @@ public class PagoView extends JFrame {
         idsPedido.clear();
         totalesPedido.clear();
         idsClientePedido.clear();
+        estadosPedido.clear();
 
         try {
             List<Pedidos> lista = pedidoService.listar();
             for (Pedidos p : lista) {
                 Cliente c = clienteService.buscarClientePorId(p.getIdCliPed());
-                String nombreCliente = c != null ? c.getNombreCli() : "Cliente " + p.getIdCliPed();
-                String etiqueta = "Pedido #" + p.getIdPed() + " - " + nombreCliente + " (Q" + p.getTotalPed() + " - " + p.getEstadoPed() + ")";
+                String nombreCliente = c != null ? c.getNombreCli() : "Cliente #" + p.getIdCliPed();
+                String estadoSufijo = "C".equalsIgnoreCase(p.getEstadoPed()) ? " [PAGADO]" : ("A".equalsIgnoreCase(p.getEstadoPed()) ? " [ANULADO]" : "");
+                String etiqueta = "Pedido #" + p.getIdPed() + " - " + nombreCliente + " (Q" + p.getTotalPed() + ")" + estadoSufijo;
                 cmbPedido.addItem(etiqueta);
                 idsPedido.add(p.getIdPed());
                 totalesPedido.add(p.getTotalPed());
                 idsClientePedido.add(p.getIdCliPed());
+                estadosPedido.add(p.getEstadoPed());
             }
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "No se pudieron cargar los pedidos: " + ex.getMessage(),
@@ -235,35 +290,61 @@ public class PagoView extends JFrame {
 
     private void seleccionarPedidoDeCombo() {
         int index = cmbPedido.getSelectedIndex();
-        if (index == -1 || index >= idsClientePedido.size() || index >= totalesPedido.size()) {
+        if (index == -1 || index >= idsPedido.size()) {
             txtCliente.setText("");
             txtTotalPagar.setText("0.00");
             txtMontoRecibido.setText("0.00");
             txtCambio.setText("0.00");
+            btnProcesar.setEnabled(false);
             return;
         }
+
         int idCli = idsClientePedido.get(index);
-        Cliente c = clienteService.buscarClientePorId(idCli);
-        txtCliente.setText(c != null ? c.getNombreCli() + " (DPI: " + c.getDpiCli() + ")" : "Cliente " + idCli);
+        Cliente cliente = clienteService.buscarClientePorId(idCli);
+        txtCliente.setText(cliente != null ? cliente.getNombreCli() : "Cliente #" + idCli);
 
         BigDecimal total = totalesPedido.get(index);
-        txtTotalPagar.setText(total.toPlainString());
+        String estado = estadosPedido.get(index);
+
+        if ("C".equalsIgnoreCase(estado)) {
+            txtTotalPagar.setText(total.toPlainString() + " (PAGADO)");
+            btnProcesar.setEnabled(false);
+        } else if ("A".equalsIgnoreCase(estado)) {
+            txtTotalPagar.setText(total.toPlainString() + " (ANULADO)");
+            btnProcesar.setEnabled(false);
+        } else {
+            txtTotalPagar.setText(total.toPlainString());
+            btnProcesar.setEnabled(total.compareTo(BigDecimal.ZERO) > 0);
+        }
+
         txtMontoRecibido.setText(total.toPlainString());
         calcularCambio();
     }
 
     private void calcularCambio() {
+        int index = cmbPedido.getSelectedIndex();
+        if (index != -1 && index < estadosPedido.size()) {
+            String est = estadosPedido.get(index);
+            if ("C".equalsIgnoreCase(est) || "A".equalsIgnoreCase(est)) {
+                btnProcesar.setEnabled(false);
+                return;
+            }
+        }
+
         try {
-            BigDecimal total = new BigDecimal(txtTotalPagar.getText().trim());
-            BigDecimal recibido = new BigDecimal(txtMontoRecibido.getText().trim());
+            BigDecimal total = index >= 0 && index < totalesPedido.size() ? totalesPedido.get(index) : BigDecimal.ZERO;
+            BigDecimal recibido = new BigDecimal(txtMontoRecibido.getText().trim().isEmpty() ? "0" : txtMontoRecibido.getText().trim());
             BigDecimal cambio = recibido.subtract(total);
             if (cambio.compareTo(BigDecimal.ZERO) < 0) {
-                txtCambio.setText("0.00");
+                txtCambio.setText("0.00 (Falta Q" + total.subtract(recibido).toPlainString() + ")");
+                btnProcesar.setEnabled(false);
             } else {
                 txtCambio.setText(cambio.toPlainString());
+                btnProcesar.setEnabled(total.compareTo(BigDecimal.ZERO) > 0);
             }
-        } catch (Exception ex) {
+        } catch (NumberFormatException ex) {
             txtCambio.setText("0.00");
+            btnProcesar.setEnabled(false);
         }
     }
 
@@ -277,15 +358,15 @@ public class PagoView extends JFrame {
                         p.getIdPad(),
                         p.getIdPedPag(),
                         fechaTexto,
-                        p.getMetodoPagoPag(),
+                        metodoCompleto(p.getMetodoPagoPag()),
                         p.getMontoRecibidoPag(),
                         p.getCambioPag(),
                         p.getNumeroReferenciaPag() != null ? p.getNumeroReferenciaPag() : "",
-                        p.getEstadoPagoPag()
+                        "P".equalsIgnoreCase(p.getEstadoPagoPag()) ? "PAGADO" : "ANULADO"
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar la lista de pagos: " + ex.getMessage(),
+            JOptionPane.showMessageDialog(this, "No se pudo cargar el historial de pagos: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -293,9 +374,11 @@ public class PagoView extends JFrame {
     private void seleccionarFilaPago() {
         int fila = tablaPagos.getSelectedRow();
         if (fila == -1) {
+            idPagoSeleccionado = null;
+            actualizarEstadoBotones(false);
             return;
         }
-        txtIdPago.setText(String.valueOf(modeloPagos.getValueAt(fila, 0)));
+        idPagoSeleccionado = (int) modeloPagos.getValueAt(fila, 0);
         int idPed = (int) modeloPagos.getValueAt(fila, 1);
         for (int i = 0; i < idsPedido.size(); i++) {
             if (idsPedido.get(i) == idPed) {
@@ -305,15 +388,14 @@ public class PagoView extends JFrame {
         }
         cmbMetodoPago.setSelectedItem(String.valueOf(modeloPagos.getValueAt(fila, 3)));
         txtMontoRecibido.setText(String.valueOf(modeloPagos.getValueAt(fila, 4)));
-        txtCambio.setText(String.valueOf(modeloPagos.getValueAt(fila, 5)));
         txtReferencia.setText(String.valueOf(modeloPagos.getValueAt(fila, 6)));
-        cmbEstadoPago.setSelectedItem(String.valueOf(modeloPagos.getValueAt(fila, 7)));
+        actualizarEstadoBotones(true);
     }
 
     private void procesarCobro() {
         int index = cmbPedido.getSelectedIndex();
         if (index == -1 || index >= idsPedido.size()) {
-            JOptionPane.showMessageDialog(this, "Seleccione un pedido para cobrar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Seleccione un pedido válido para cobrar.", "Validación", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -324,17 +406,24 @@ public class PagoView extends JFrame {
             return;
         }
 
-        Pagos pagoExistente = pagoService.buscarPorPedido(idPed);
-        if (pagoExistente != null) {
-            JOptionPane.showMessageDialog(this, "El pedido #" + idPed + " ya tiene un pago registrado (Pago #" + pagoExistente.getIdPad() + ").", "Aviso", JOptionPane.WARNING_MESSAGE);
+        if ("C".equalsIgnoreCase(pedido.getEstadoPed())) {
+            JOptionPane.showMessageDialog(this, "Este pedido ya fue pagado.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        BigDecimal total = pedido.getTotalPed();
+        if (total.compareTo(BigDecimal.ZERO) <= 0) {
+            JOptionPane.showMessageDialog(this, "No se puede procesar el cobro de un pedido con total Q0.00.", "Validación", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         BigDecimal montoRecibido;
         try {
             montoRecibido = new BigDecimal(txtMontoRecibido.getText().trim());
-            if (montoRecibido.compareTo(pedido.getTotalPed()) < 0) {
-                JOptionPane.showMessageDialog(this, "El monto recibido no puede ser menor al total a pagar.", "Validación", JOptionPane.WARNING_MESSAGE);
+            if (montoRecibido.compareTo(total) < 0) {
+                JOptionPane.showMessageDialog(this,
+                        "El monto recibido (Q" + montoRecibido + ") es menor que el total a pagar (Q" + total + ").",
+                        "Validación", JOptionPane.WARNING_MESSAGE);
                 return;
             }
         } catch (NumberFormatException ex) {
@@ -342,14 +431,9 @@ public class PagoView extends JFrame {
             return;
         }
 
-        BigDecimal cambio = montoRecibido.subtract(pedido.getTotalPed());
-        String metodo = (String) cmbMetodoPago.getSelectedItem();
+        BigDecimal cambio = montoRecibido.subtract(total);
+        String metodo = metodoAbreviado((String) cmbMetodoPago.getSelectedItem());
         String referencia = txtReferencia.getText().trim();
-
-        if (("TC".equals(metodo) || "TR".equals(metodo)) && referencia.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Para pagos con tarjeta o transferencia se requiere un número de referencia.", "Validación", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
 
         try {
             Pagos pago = new Pagos();
@@ -373,17 +457,31 @@ public class PagoView extends JFrame {
             cargarTablaPagos();
             limpiarFormulario();
 
-            if (parent instanceof PedidoView) {
-                ((PedidoView) parent).dispose();
-                new PedidoView(null).setVisible(true);
-            }
+            FacturaView factura = new FacturaView(this, idPed);
+            factura.setVisible(true);
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Error al procesar el pago: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
+    private void verFactura() {
+        int fila = tablaPagos.getSelectedRow();
+        if (fila != -1) {
+            int idPed = (int) modeloPagos.getValueAt(fila, 1);
+            new FacturaView(this, idPed).setVisible(true);
+            return;
+        }
+        int index = cmbPedido.getSelectedIndex();
+        if (index != -1 && index < idsPedido.size()) {
+            int idPed = idsPedido.get(index);
+            new FacturaView(this, idPed).setVisible(true);
+            return;
+        }
+        JOptionPane.showMessageDialog(this, "Seleccione un pago de la tabla o un pedido para ver su factura.", "Aviso", JOptionPane.WARNING_MESSAGE);
+    }
+
     private void eliminarPago() {
-        if (txtIdPago.getText().isEmpty()) {
+        if (idPagoSeleccionado == null) {
             JOptionPane.showMessageDialog(this, "Seleccione un pago de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -391,8 +489,7 @@ public class PagoView extends JFrame {
                 "Confirmar", JOptionPane.YES_NO_OPTION);
         if (confirmar == JOptionPane.YES_OPTION) {
             try {
-                int idPag = Integer.parseInt(txtIdPago.getText().trim());
-                pagoService.eliminar(idPag);
+                pagoService.eliminar(idPagoSeleccionado);
                 JOptionPane.showMessageDialog(this, "Pago eliminado correctamente.");
                 cargarTablaPagos();
                 limpiarFormulario();
@@ -403,12 +500,12 @@ public class PagoView extends JFrame {
     }
 
     private void limpiarFormulario() {
-        txtIdPago.setText("");
+        idPagoSeleccionado = null;
         txtReferencia.setText("");
         cmbMetodoPago.setSelectedIndex(0);
-        cmbEstadoPago.setSelectedIndex(0);
         tablaPagos.clearSelection();
         seleccionarPedidoDeCombo();
+        actualizarEstadoBotones(false);
     }
 
     private void regresar() {
@@ -416,5 +513,25 @@ public class PagoView extends JFrame {
         if (parent != null && parent.isDisplayable()) {
             parent.toFront();
         }
+    }
+
+    private String metodoAbreviado(String metodoCompleto) {
+        if ("Tarjeta Crédito/Débito".equalsIgnoreCase(metodoCompleto)) {
+            return "TC";
+        }
+        if ("Transferencia".equalsIgnoreCase(metodoCompleto)) {
+            return "TR";
+        }
+        return "EF";
+    }
+
+    private String metodoCompleto(String metodoAbreviado) {
+        if ("TC".equalsIgnoreCase(metodoAbreviado) || "TARJETA".equalsIgnoreCase(metodoAbreviado)) {
+            return "Tarjeta Crédito/Débito";
+        }
+        if ("TR".equalsIgnoreCase(metodoAbreviado) || "TRANSFERENCIA".equalsIgnoreCase(metodoAbreviado)) {
+            return "Transferencia";
+        }
+        return "Efectivo";
     }
 }
