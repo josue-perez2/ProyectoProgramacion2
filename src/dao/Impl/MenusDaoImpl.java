@@ -67,12 +67,17 @@ public class MenusDaoImpl implements MenusDao {
         String sql = "INSERT INTO MENUS (CODIGO_MEN, NOMBRE_MEN, PRECIO_MEN, ACTIVO_MEN) " +
                 "VALUES (?, ?, ?, ?)";
         try (Connection conn = conexion.conectar();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID_MEN"})) {
             ps.setString(1, menu.getCodigoMen());
             ps.setString(2, menu.getNombreMen());
             ps.setBigDecimal(3, menu.getPrecioMen());
             ps.setString(4, menu.getActivoMen());
             ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    menu.setIdMen(rs.getInt(1));
+                }
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

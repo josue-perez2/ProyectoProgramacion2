@@ -16,6 +16,7 @@ public class ApiServer {
         servidor.createContext("/api/login", new LoginController());
         servidor.createContext("/api/puntos/historial", new HistorialPuntosController());
         servidor.createContext("/api/puntos/recompensas", new RecompensasController());
+        servidor.createContext("/api/puntos/canjear", new CanjeController());
         servidor.createContext("/", new NoEncontradoController());
         servidor.setExecutor(Executors.newFixedThreadPool(5));
         servidor.start();

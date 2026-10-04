@@ -38,17 +38,52 @@ public class RecompensasDaoImpl implements RecompesasDao {
 
     @Override
     public void insertar(Recompensas recompensa) {
-
+        String sql = "INSERT INTO RECOMPENSAS (NOMBRE_REC, PUNTOS_REQUERIDOS_REC, TIPO_ITEM_REC, ID_ITEM_REC, ACTIVO_REC) VALUES (?, ?, ?, ?, ?)";
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID_REC"})) {
+            ps.setString(1, recompensa.getNombreRec());
+            ps.setInt(2, recompensa.getPuntosRequeridosRec());
+            ps.setString(3, recompensa.getTipoItemRec());
+            ps.setInt(4, recompensa.getIdItemRec());
+            ps.setString(5, recompensa.getActivoRec() != null ? recompensa.getActivoRec() : "A");
+            ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    recompensa.setIdRec(rs.getInt(1));
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public void actualizar(Recompensas recompensa) {
-
+        String sql = "UPDATE RECOMPENSAS SET NOMBRE_REC = ?, PUNTOS_REQUERIDOS_REC = ?, TIPO_ITEM_REC = ?, ID_ITEM_REC = ?, ACTIVO_REC = ? WHERE ID_REC = ?";
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, recompensa.getNombreRec());
+            ps.setInt(2, recompensa.getPuntosRequeridosRec());
+            ps.setString(3, recompensa.getTipoItemRec());
+            ps.setInt(4, recompensa.getIdItemRec());
+            ps.setString(5, recompensa.getActivoRec() != null ? recompensa.getActivoRec() : "A");
+            ps.setInt(6, recompensa.getIdRec());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public void eliminar(int id) {
-
+        String sql = "DELETE FROM RECOMPENSAS WHERE ID_REC = ?";
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private Recompensas mapear(ResultSet rs) throws SQLException {
@@ -59,7 +94,6 @@ public class RecompensasDaoImpl implements RecompesasDao {
         recompensas.setTipoItemRec(rs.getString("TIPO_ITEM_REC"));
         recompensas.setIdItemRec(rs.getInt("ID_ITEM_REC"));
         recompensas.setActivoRec(rs.getString("ACTIVO_REC"));
-
         return recompensas;
     }
 }

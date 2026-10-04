@@ -23,4 +23,16 @@ public class RecompensaService {
                 .filter(recompensa -> recompensa.getPuntosRequeridosRec() <= saldoPuntos)
                 .toList();
     }
+
+    public void insertar(Recompensas recompensa) {
+        recompesasDao.insertar(recompensa);
+    }
+
+    public void actualizar(Recompensas recompensa) {
+        recompesasDao.actualizar(recompensa);
+    }
+
+    public void eliminar(int id) {
+        recompesasDao.eliminar(id);
+    }
 }

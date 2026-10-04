@@ -313,10 +313,18 @@ public class ClienteView extends JFrame {
         if (confirmar == JOptionPane.YES_OPTION) {
             try {
                 clienteService.eliminar(idClienteSeleccionado);
+                JOptionPane.showMessageDialog(this, "Cliente eliminado correctamente.");
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                try {
+                    clienteService.integridad(idClienteSeleccionado);
+                    JOptionPane.showMessageDialog(this, "El cliente tiene pedidos o movimientos registrados, por lo que fue marcado como INACTIVO para preservar el historial.", "Información", JOptionPane.INFORMATION_MESSAGE);
+                    cargarTabla();
+                    limpiarFormulario();
+                } catch (RuntimeException exInactivar) {
+                    JOptionPane.showMessageDialog(this, "No se pudo procesar la solicitud: " + exInactivar.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }

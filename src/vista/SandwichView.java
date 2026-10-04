@@ -482,7 +482,7 @@ public class SandwichView extends JFrame {
             detalle.setIdSanDet(idSandwichSeleccionado);
             detalle.setIdProDet(idsProductoPan.get(cmbProducto.getSelectedIndex()));
             detalle.setCantidadDet(cantidad);
-            detalle.setObligatorioDet("Obligatorio".equals(cmbObligatorio.getSelectedItem()) ? "S" : "N");
+            detalle.setObligatorioDet("Incluido".equals(cmbObligatorio.getSelectedItem()) ? "S" : "N");
 
             detalleSandwichService.insertar(detalle);
             cargarDetalle(idSandwichSeleccionado);

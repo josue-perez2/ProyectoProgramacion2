@@ -52,7 +52,39 @@ public class PagoService {
     }
 
     public void eliminar(int id) {
-        pagosDao.eliminar(id);
+        revertirPago(id);
+    }
+
+    public void revertirPago(int id) {
+        Pagos pago = pagosDao.buscarPorId(id);
+        if (pago != null) {
+            Pedidos pedido = pedidosDao.buscarPorId(pago.getIdPedPag());
+            if (pedido != null) {
+                pedido.setEstadoPed("P");
+                pedidosDao.actualizar(pedido);
+                if (pedido.getPuntosObtenidosPed() > 0) {
+                    Cliente cliente = clienteDao.buscarClientePorId(pedido.getIdCliPed());
+                    if (cliente != null && cliente.getSaldoPuntoCli() != null) {
+                        BigDecimal puntosRestar = new BigDecimal(pedido.getPuntosObtenidosPed());
+                        BigDecimal nuevoSaldo = cliente.getSaldoPuntoCli().subtract(puntosRestar);
+                        if (nuevoSaldo.compareTo(BigDecimal.ZERO) < 0) {
+                            nuevoSaldo = BigDecimal.ZERO;
+                        }
+                        cliente.setSaldoPuntoCli(nuevoSaldo);
+                        clienteDao.actualizar(cliente);
+
+                        HistorialPuntos his = new HistorialPuntos();
+                        his.setIdCliHis(cliente.getIdCli());
+                        his.setFechaHis(LocalDateTime.now());
+                        his.setTipoOperacionHis("S");
+                        his.setPuntosHis(-pedido.getPuntosObtenidosPed());
+                        his.setReferenciaHis("Anulacion de Pago Pedido #" + pedido.getIdPed());
+                        historialPuntosDao.insertar(his);
+                    }
+                }
+            }
+            pagosDao.eliminar(id);
+        }
     }
 
     public void procesarPago(Pagos pago, Pedidos pedido, Cliente cliente) {

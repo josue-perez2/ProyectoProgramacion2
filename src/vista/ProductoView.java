@@ -342,7 +342,26 @@ public class ProductoView extends JFrame {
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                try {
+                    Productos p = null;
+                    for (Productos prod : productoService.listar()) {
+                        if (prod.getIdPro() == idProductoSeleccionado) {
+                            p = prod;
+                            break;
+                        }
+                    }
+                    if (p != null) {
+                        p.setActivoPro("I");
+                        productoService.actualizar(p);
+                        JOptionPane.showMessageDialog(this, "El producto está vinculado a recetas o combos, por lo que fue marcado como INACTIVO para proteger los catálogos.", "Información", JOptionPane.INFORMATION_MESSAGE);
+                        cargarTabla();
+                        limpiarFormulario();
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (RuntimeException exInactivar) {
+                    JOptionPane.showMessageDialog(this, "No se pudo procesar la solicitud: " + exInactivar.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
     }

@@ -240,10 +240,11 @@ public class CategoriaView extends JFrame {
         if (confirmar == JOptionPane.YES_OPTION) {
             try {
                 categoriaService.eliminar(idCategoriaSeleccionada);
+                JOptionPane.showMessageDialog(this, "Categoría eliminada correctamente.");
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "No se puede eliminar la categoría porque contiene productos registrados. Reasigne o elimine primero los productos asociados.", "Operación Bloqueada", JOptionPane.WARNING_MESSAGE);
             }
         }
     }

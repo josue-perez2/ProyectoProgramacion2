@@ -67,12 +67,17 @@ public class SandwichDaoImpl implements SandwichDao {
         String sql = "INSERT INTO SANDWICH (CODIGO_SAN, NOMBRE_SAN, PRECIO_SAN, ACTIVO_SAN) " +
                 "VALUES (?, ?, ?, ?)";
         try (Connection conn = conexion.conectar();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+             PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID_SAN"})) {
             ps.setString(1, sandwich.getCodigoSan());
             ps.setString(2, sandwich.getNombreSan());
             ps.setBigDecimal(3, sandwich.getPrecioSan());
             ps.setString(4, sandwich.getActivoSan());
             ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    sandwich.setIdSan(rs.getInt(1));
+                }
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

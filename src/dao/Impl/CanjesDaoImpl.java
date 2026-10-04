@@ -33,20 +33,25 @@ public class CanjesDaoImpl implements CanjesDao {
 
     @Override
     public void insertar(Canjes canjes) {
-        String sql = "INSERT INTO CANJES (ID_CAN, ID_CLI_CAN, ID_REC_CAN, FECHA_CAN, PUNTOS_RECOMPENSA_CAN) " +
-                "VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO CANJES (ID_CLI_CAN, ID_REC_CAN, FECHA_CAN, PUNTOS_RECOMPENSA_CAN) " +
+                "VALUES (?, ?, ?, ?)";
         try (Connection conn = conexion.conectar();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setInt(1, canjes.getIdCan());
-            ps.setInt(2, canjes.getIdCliCan());
-            ps.setInt(3, canjes.getIdRecCan());
-            ps.setTimestamp(4, Timestamp.valueOf(canjes.getFechaCan()));
-            ps.setInt(5, canjes.getPuntosRecompensaCan());
+             PreparedStatement ps = conn.prepareStatement(sql, new String[]{"ID_CAN"})) {
+            ps.setInt(1, canjes.getIdCliCan());
+            ps.setInt(2, canjes.getIdRecCan());
+            java.time.LocalDateTime fecha = canjes.getFechaCan() != null ? canjes.getFechaCan() : java.time.LocalDateTime.now();
+            canjes.setFechaCan(fecha);
+            ps.setTimestamp(3, Timestamp.valueOf(fecha));
+            ps.setInt(4, canjes.getPuntosRecompensaCan());
             ps.executeUpdate();
+            try (ResultSet rs = ps.getGeneratedKeys()) {
+                if (rs.next()) {
+                    canjes.setIdCan(rs.getInt(1));
+                }
+            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     @Override

@@ -551,6 +551,9 @@ public class MenuView extends JFrame {
                 "Confirmar", JOptionPane.YES_NO_OPTION);
         if (confirmar == JOptionPane.YES_OPTION) {
             try {
+                for (DetalleMenu d : detalleMenuService.listarPorMenu(idMenuSeleccionado)) {
+                    detalleMenuService.eliminar(d.getIdDetMen());
+                }
                 menuService.eliminar(idMenuSeleccionado);
                 cargarTabla();
                 limpiarFormulario();

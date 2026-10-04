@@ -679,6 +679,10 @@ public class PedidoView extends JFrame {
             JOptionPane.showMessageDialog(this, "Seleccione un pedido de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        if (esPedidoBloqueado()) {
+            JOptionPane.showMessageDialog(this, "No se puede eliminar un pedido que ya ha sido pagado o anulado.", "Operación Bloqueada", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar el pedido seleccionado y su detalle?",
                 "Confirmar", JOptionPane.YES_NO_OPTION);
         if (confirmar == JOptionPane.YES_OPTION) {

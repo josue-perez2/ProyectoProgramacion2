@@ -20,12 +20,21 @@ public abstract class ApiHandler implements HttpHandler {
     @Override
     public final void handle(HttpExchange exchange) throws IOException {
         exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            exchange.close();
+            return;
+        }
+
         try {
             ejecutar(exchange);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IllegalStateException e) {
             error(exchange, 400, e.getMessage());
         } catch (Exception e) {
-            e.printStackTrace();
             error(exchange, 500, "Error interno del servidor");
         } finally {
             exchange.close();
