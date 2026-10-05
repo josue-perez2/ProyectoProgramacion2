@@ -2,83 +2,108 @@ package vista;
 
 import model.Cliente;
 import model.Pedidos;
+import service.CanjesService;
 import service.ClienteService;
 import service.PedidoService;
+import util.FormatoTexto;
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
-import javax.swing.table.TableRowSorter;
+import javax.swing.text.AbstractDocument;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.List;
 
 public class DashboardView extends JFrame {
 
     private final ClienteService clienteService;
     private final PedidoService pedidoService;
+    private final CanjesService canjesService;
 
     private final JLabel lblTotalClientes = new JLabel("0");
     private final JLabel lblTotalPedidos = new JLabel("0");
     private final JLabel lblTotalPuntos = new JLabel("0");
+    private final JLabel lblTotalCanjes = new JLabel("0");
 
-    private final JTextField txtBuscar = FabricaDaisyUI.crearCampoTexto("Buscar cliente por DPI o nombre...", 25);
     private final JComboBox<String> cmbTemas = new JComboBox<>(TemaGestor.obtenerNombresTemas());
+    private final JTextField txtDpiBusqueda = FabricaDaisyUI.crearCampoTexto("DPI...", 16);
+    private final JButton btnBuscarCliente = FabricaDaisyUI.crearBotonPrimario("Buscar", Icons.search(16), e -> buscarClienteRapido());
+    private final JButton btnLimpiarBusqueda = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(16), e -> limpiarBusquedaCliente());
 
-    private final JLabel lblEstadoSeleccion = new JLabel("Seleccione un cliente para iniciar un pedido");
-    private final JButton btnPedido = FabricaDaisyUI.crearBotonPrimario("+ Nuevo Pedido", e -> abrirPedido());
+    private final JPanel panelContenidoFicha = new JPanel(new BorderLayout(8, 8));
+    private final JLabel lblNombreClienteFicha = new JLabel("Ningún cliente seleccionado");
+    private final JLabel lblDpiClienteFicha = new JLabel("DPI: -");
+    private final JLabel lblTelefonoClienteFicha = new JLabel("Tel: -");
+    private final JLabel lblCorreoClienteFicha = new JLabel("Correo: -");
+    private final JLabel lblDireccionClienteFicha = new JLabel("Dirección: -");
+    private final JLabel lblSaldoPuntosFicha = new JLabel("Saldo: 0 pts");
+    private final JLabel lblEstadoClienteFicha = new JLabel("ESTADO: -");
+    private final JButton btnPedidoConCliente = FabricaDaisyUI.crearBotonPrimario("Nuevo Pedido", Icons.shoppingBag(16), e -> iniciarPedidoConClienteActual());
+    private final JButton btnCanjeConCliente = FabricaDaisyUI.crearBotonSecundario("Canjear Puntos", Icons.gift(16), e -> iniciarCanjeConClienteActual());
 
-    private final DefaultTableModel modeloTabla = new DefaultTableModel() {
+    private Cliente clienteConsultado = null;
+
+    private final DefaultTableModel modeloUltimosPedidos = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
-    private final JTable tabla = new JTable(modeloTabla);
-    private TableRowSorter<DefaultTableModel> clasificador;
-
-    private Cliente clienteSeleccionado;
+    private final JTable tablaUltimosPedidos = new JTable(modeloUltimosPedidos);
+    private final DateTimeFormatter formateadorFecha = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public DashboardView() {
-        super("Sistema de Ventas");
+        super("Pan, Puntos y Premios - Panel de Control");
         this.clienteService = new ClienteService();
         this.pedidoService = new PedidoService();
-        this.clienteSeleccionado = null;
+        this.canjesService = new CanjesService();
 
         iniciarComponentes();
         cargarMetricas();
-        cargarTabla();
+        cargarUltimosPedidos();
+        limpiarBusquedaCliente();
     }
 
     private void iniciarComponentes() {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(1180, 780);
-        setMinimumSize(new Dimension(1080, 700));
+        setSize(1240, 840);
+        setMinimumSize(new Dimension(1120, 720));
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout(16, 16));
+        setLayout(new BorderLayout(14, 14));
         getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
 
-        JPanel panelSuperior = new JPanel(new BorderLayout(12, 12));
-        panelSuperior.setBorder(new EmptyBorder(16, 24, 10, 24));
+        JPanel panelSuperior = new JPanel(new BorderLayout(12, 10));
+        panelSuperior.setBorder(new EmptyBorder(14, 24, 6, 24));
         panelSuperior.setOpaque(false);
 
-        JLabel lblTitulo = new JLabel("Punto de Venta");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        JPanel panelTitulos = new JPanel(new GridLayout(2, 1, 0, 2));
+        panelTitulos.setOpaque(false);
+
+        JLabel lblTitulo = new JLabel("PAN, PUNTOS Y PREMIOS");
+        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblTitulo.putClientProperty("FlatLaf.style", "[light]foreground: #0f172a; [dark]foreground: #f8f8f2");
 
-        JPanel panelTemaSelector = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 4));
-        panelTemaSelector.setOpaque(false);
+        JLabel lblSubtitulo = new JLabel("Sistema de Gestión de Pedidos");
+        lblSubtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblSubtitulo.putClientProperty("FlatLaf.style", "[light]foreground: #64748b; [dark]foreground: #bd93f9");
+
+        panelTitulos.add(lblTitulo);
+        panelTitulos.add(lblSubtitulo);
+
+        JPanel panelSuperiorDerecha = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 4));
+        panelSuperiorDerecha.setOpaque(false);
+
         JLabel lblTemaEti = new JLabel("Tema:");
         lblTemaEti.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblTemaEti.putClientProperty("FlatLaf.style", "[light]foreground: #475569; [dark]foreground: #f8f8f2");
-
         cmbTemas.setSelectedItem(TemaGestor.getTemaActual());
-        cmbTemas.setPreferredSize(new Dimension(180, 34));
+        cmbTemas.setPreferredSize(new Dimension(160, 34));
         FabricaDaisyUI.estilizarCampo(cmbTemas);
         cmbTemas.addActionListener(e -> {
             String seleccionado = (String) cmbTemas.getSelectedItem();
@@ -86,19 +111,31 @@ public class DashboardView extends JFrame {
                 TemaGestor.aplicarTema(seleccionado);
             }
         });
-        panelTemaSelector.add(lblTemaEti);
-        panelTemaSelector.add(cmbTemas);
 
-        panelSuperior.add(lblTitulo, BorderLayout.WEST);
-        panelSuperior.add(panelTemaSelector, BorderLayout.EAST);
+        JButton btnActualizarTodo = FabricaDaisyUI.crearBotonRefrescar(e -> {
+            cargarMetricas();
+            cargarUltimosPedidos();
+            if (clienteConsultado != null) {
+                Cliente ref = clienteService.buscarClientePorId(clienteConsultado.getIdCli());
+                mostrarFichaCliente(ref);
+            }
+        });
 
-        JPanel panelMetricas = new JPanel(new GridLayout(1, 3, 18, 0));
-        panelMetricas.setBorder(new EmptyBorder(4, 24, 12, 24));
+        panelSuperiorDerecha.add(lblTemaEti);
+        panelSuperiorDerecha.add(cmbTemas);
+        panelSuperiorDerecha.add(btnActualizarTodo);
+
+        panelSuperior.add(panelTitulos, BorderLayout.WEST);
+        panelSuperior.add(panelSuperiorDerecha, BorderLayout.EAST);
+
+        JPanel panelMetricas = new JPanel(new GridLayout(1, 4, 16, 0));
+        panelMetricas.setBorder(new EmptyBorder(4, 24, 10, 24));
         panelMetricas.setOpaque(false);
 
-        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Clientes", lblTotalClientes, new Color(16, 185, 129), new Color(80, 250, 123)));
-        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Pedidos", lblTotalPedidos, new Color(99, 102, 241), new Color(139, 233, 253)));
-        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Puntos", lblTotalPuntos, new Color(217, 119, 6), new Color(241, 250, 140)));
+        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Clientes Registrados", lblTotalClientes, new Color(16, 185, 129), new Color(80, 250, 123)));
+        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Total de Pedidos", lblTotalPedidos, new Color(99, 102, 241), new Color(139, 233, 253)));
+        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Puntos en Circulación", lblTotalPuntos, new Color(217, 119, 6), new Color(241, 250, 140)));
+        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Premios Canjeados", lblTotalCanjes, new Color(236, 72, 153), new Color(255, 121, 198)));
 
         JPanel panelNorte = new JPanel(new BorderLayout());
         panelNorte.setOpaque(false);
@@ -106,197 +143,276 @@ public class DashboardView extends JFrame {
         panelNorte.add(panelMetricas, BorderLayout.SOUTH);
         add(panelNorte, BorderLayout.NORTH);
 
-        JPanel panelCentro = new JPanel(new BorderLayout(10, 10));
-        panelCentro.setBorder(new EmptyBorder(2, 24, 8, 24));
+        JPanel panelCentro = new JPanel(new GridLayout(1, 2, 18, 0));
+        panelCentro.setBorder(new EmptyBorder(2, 24, 6, 24));
         panelCentro.setOpaque(false);
 
-        JPanel panelFiltro = new JPanel(new BorderLayout(12, 8));
-        panelFiltro.setBorder(new EmptyBorder(0, 0, 10, 0));
-        panelFiltro.setOpaque(false);
+        JPanel panelModulosAcciones = new JPanel(new BorderLayout(0, 10));
+        panelModulosAcciones.setOpaque(false);
 
-        JPanel panelBuscador = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        panelBuscador.setOpaque(false);
-        JLabel lblLupa = new JLabel("Buscar:");
-        lblLupa.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblLupa.putClientProperty("FlatLaf.style", "[light]foreground: #475569; [dark]foreground: #f8f8f2");
+        JPanel panelGrid4 = new JPanel(new GridLayout(2, 2, 10, 10));
+        panelGrid4.setOpaque(false);
 
-        txtBuscar.setPreferredSize(new Dimension(360, 36));
-        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                filtrarTabla();
-            }
+        JButton btnModuloPedido = FabricaDaisyUI.crearBotonPrimario("Nuevo Pedido", Icons.shoppingBag(18), e -> abrirPedido());
+        JButton btnModuloCanje = FabricaDaisyUI.crearBotonSecundario("Canjear Puntos", Icons.gift(18), e -> abrirCanjes());
+        JButton btnModuloPagos = FabricaDaisyUI.crearBotonAcento("Cobros y Pagos", Icons.creditCard(18), e -> abrirPagos());
+        JButton btnModuloClientes = FabricaDaisyUI.crearBotonNeutral("Clientes", Icons.user(18), e -> abrirAdministracionCliente());
+        JButton btnModuloAdmin = FabricaDaisyUI.crearBotonNeutral("Administración General", Icons.utensils(18), e -> abrirAdministracion());
 
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                filtrarTabla();
-            }
+        btnModuloPedido.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnModuloCanje.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnModuloPagos.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnModuloClientes.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnModuloAdmin.setFont(new Font("Segoe UI", Font.BOLD, 13));
 
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                filtrarTabla();
-            }
-        });
+        btnModuloPedido.setPreferredSize(new Dimension(170, 42));
+        btnModuloCanje.setPreferredSize(new Dimension(170, 42));
+        btnModuloPagos.setPreferredSize(new Dimension(170, 42));
+        btnModuloClientes.setPreferredSize(new Dimension(170, 42));
+        btnModuloAdmin.setPreferredSize(new Dimension(360, 40));
 
-        panelBuscador.add(lblLupa);
-        panelBuscador.add(txtBuscar);
+        panelGrid4.add(btnModuloPedido);
+        panelGrid4.add(btnModuloCanje);
+        panelGrid4.add(btnModuloPagos);
+        panelGrid4.add(btnModuloClientes);
 
-        lblEstadoSeleccion.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblEstadoSeleccion.putClientProperty("FlatLaf.style", "[light]foreground: #64748b; [dark]foreground: #bd93f9");
+        panelModulosAcciones.add(panelGrid4, BorderLayout.CENTER);
+        panelModulosAcciones.add(btnModuloAdmin, BorderLayout.SOUTH);
 
-        panelFiltro.add(panelBuscador, BorderLayout.WEST);
-        panelFiltro.add(lblEstadoSeleccion, BorderLayout.EAST);
-        panelCentro.add(panelFiltro, BorderLayout.NORTH);
+        JPanel tarjetaModulos = FabricaDaisyUI.crearTarjetaSeccion("Módulos Principales", panelModulosAcciones);
+        panelCentro.add(tarjetaModulos);
 
-        String[] columnas = {"ID", "DPI", "Nombre", "Dirección", "Teléfono", "Puntos acumulados", "Estado"};
-        modeloTabla.setColumnIdentifiers(columnas);
-        clasificador = new TableRowSorter<>(modeloTabla);
-        tabla.setRowSorter(clasificador);
-        FabricaDaisyUI.estilizarTabla(tabla);
-        tabla.getColumnModel().getColumn(6).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
+        JPanel panelConsultaCliente = new JPanel(new BorderLayout(10, 10));
+        panelConsultaCliente.setOpaque(false);
 
-        TableColumnModel colModel = tabla.getColumnModel();
-        colModel.getColumn(0).setPreferredWidth(50);
-        colModel.getColumn(0).setMaxWidth(70);
-        colModel.getColumn(1).setPreferredWidth(140);
-        colModel.getColumn(2).setPreferredWidth(210);
-        colModel.getColumn(3).setPreferredWidth(240);
-        colModel.getColumn(4).setPreferredWidth(110);
-        colModel.getColumn(5).setPreferredWidth(95);
-        colModel.getColumn(6).setPreferredWidth(105);
+        JPanel panelBarraDpi = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        panelBarraDpi.setOpaque(false);
 
-        tabla.getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) {
-                seleccionarClienteDeFila();
-            }
-        });
+        JLabel lblDpiEti = new JLabel("DPI:");
+        lblDpiEti.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        ((AbstractDocument) txtDpiBusqueda.getDocument()).setDocumentFilter(FormatoTexto.filtroDpi());
+        txtDpiBusqueda.setPreferredSize(new Dimension(170, 36));
+        txtDpiBusqueda.addActionListener(e -> buscarClienteRapido());
 
-        tabla.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    abrirPedido();
-                }
-            }
-        });
+        btnBuscarCliente.setPreferredSize(new Dimension(110, 36));
+        btnLimpiarBusqueda.setPreferredSize(new Dimension(110, 36));
 
-        JScrollPane scrollTabla = new JScrollPane(tabla);
-        scrollTabla.setBorder(BorderFactory.createEmptyBorder());
+        panelBarraDpi.add(lblDpiEti);
+        panelBarraDpi.add(txtDpiBusqueda);
+        panelBarraDpi.add(btnBuscarCliente);
+        panelBarraDpi.add(btnLimpiarBusqueda);
 
-        JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
-            cargarMetricas();
-            cargarTabla();
-        });
+        panelContenidoFicha.setOpaque(false);
+        panelContenidoFicha.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 0, 0, TemaGestor.esModoOscuro() ? new Color(68, 71, 90) : new Color(226, 232, 240)),
+                BorderFactory.createEmptyBorder(10, 8, 8, 8)
+        ));
 
-        JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccionConBoton("Clientes", btnRefrescar, scrollTabla);
+        panelConsultaCliente.add(panelBarraDpi, BorderLayout.NORTH);
+        panelConsultaCliente.add(panelContenidoFicha, BorderLayout.CENTER);
 
-        panelCentro.add(tarjetaTabla, BorderLayout.CENTER);
+        JPanel tarjetaConsultaCliente = FabricaDaisyUI.crearTarjetaSeccion("Búsqueda de Cliente", panelConsultaCliente);
+        panelCentro.add(tarjetaConsultaCliente);
+
         add(panelCentro, BorderLayout.CENTER);
 
-        JPanel panelInferior = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 14));
-        panelInferior.setOpaque(false);
-        panelInferior.putClientProperty("FlatLaf.style", "[light]border: 1,0,0,0,#e2e8f0; [dark]border: 1,0,0,0,#44475a");
+        JPanel panelSur = new JPanel(new BorderLayout(8, 8));
+        panelSur.setBorder(new EmptyBorder(4, 24, 14, 24));
+        panelSur.setOpaque(false);
 
-        btnPedido.setEnabled(false);
-        JButton btnPagos = FabricaDaisyUI.crearBotonSecundario("Cobros y Facturación", e -> abrirPagos());
-        JButton btnClientes = FabricaDaisyUI.crearBotonAcento("Clientes", e -> abrirAdministracionCliente());
-        JButton btnCatalogos = FabricaDaisyUI.crearBotonNeutral("Administración", e -> abrirAdministracion());
-        JButton btnSalir = FabricaDaisyUI.crearBotonPeligro("Salir", e -> System.exit(0));
+        String[] columnasPedidos = {"No. Pedido", "Cliente", "Total", "Puntos", "Estado", "Fecha"};
+        modeloUltimosPedidos.setColumnIdentifiers(columnasPedidos);
+        tablaUltimosPedidos.setModel(modeloUltimosPedidos);
+        FabricaDaisyUI.estilizarTabla(tablaUltimosPedidos);
 
-        btnPedido.setPreferredSize(new Dimension(160, 38));
-        btnPagos.setPreferredSize(new Dimension(195, 38));
-        btnClientes.setPreferredSize(new Dimension(135, 38));
-        btnCatalogos.setPreferredSize(new Dimension(135, 38));
-        btnSalir.setPreferredSize(new Dimension(110, 38));
+        TableColumnModel colModel = tablaUltimosPedidos.getColumnModel();
+        colModel.getColumn(0).setPreferredWidth(80);
+        colModel.getColumn(0).setMaxWidth(100);
+        colModel.getColumn(1).setPreferredWidth(220);
+        colModel.getColumn(2).setPreferredWidth(90);
+        colModel.getColumn(3).setPreferredWidth(120);
+        colModel.getColumn(4).setPreferredWidth(100);
+        colModel.getColumn(5).setPreferredWidth(150);
 
-        panelInferior.add(btnPedido);
-        panelInferior.add(btnPagos);
-        panelInferior.add(btnClientes);
-        panelInferior.add(btnCatalogos);
-        panelInferior.add(btnSalir);
+        JScrollPane scrollUltimos = new JScrollPane(tablaUltimosPedidos);
+        scrollUltimos.setPreferredSize(new Dimension(1160, 130));
+        scrollUltimos.setBorder(BorderFactory.createEmptyBorder());
 
-        add(panelInferior, BorderLayout.SOUTH);
+        JPanel tarjetaUltimos = FabricaDaisyUI.crearTarjetaSeccion("Últimos Pedidos", scrollUltimos);
+        panelSur.add(tarjetaUltimos, BorderLayout.CENTER);
+
+        JPanel panelPie = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 6));
+        panelPie.setOpaque(false);
+        JButton btnSalir = FabricaDaisyUI.crearBotonPeligro("Salir", Icons.logOut(16), e -> System.exit(0));
+        btnSalir.setPreferredSize(new Dimension(190, 36));
+        panelPie.add(btnSalir);
+        panelSur.add(panelPie, BorderLayout.SOUTH);
+
+        add(panelSur, BorderLayout.SOUTH);
+    }
+
+    private void buscarClienteRapido() {
+        String texto = txtDpiBusqueda.getText().trim();
+        String soloDigitos = FormatoTexto.soloDigitos(texto);
+        if (soloDigitos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor ingrese el número de DPI a consultar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        Cliente c = clienteService.buscarPorDpi(soloDigitos);
+        if (c == null) {
+            int opcion = JOptionPane.showConfirmDialog(
+                    this,
+                    "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al nuevo cliente?",
+                    "Cliente No Encontrado",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+            if (opcion == JOptionPane.YES_OPTION) {
+                new ClienteView(this, soloDigitos).setVisible(true);
+            }
+            limpiarBusquedaCliente();
+            return;
+        }
+        mostrarFichaCliente(c);
+    }
+
+    private void mostrarFichaCliente(Cliente c) {
+        this.clienteConsultado = c;
+        panelContenidoFicha.removeAll();
+        if (c == null) {
+            JLabel lblVacio = new JLabel("<html><center>Ingrese un DPI y presione <b>Buscar</b> para consultar la información del cliente.</center></html>", SwingConstants.CENTER);
+            lblVacio.setForeground(Color.GRAY);
+            lblVacio.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+            panelContenidoFicha.add(lblVacio, BorderLayout.CENTER);
+            panelContenidoFicha.revalidate();
+            panelContenidoFicha.repaint();
+            return;
+        }
+
+        JPanel panelDatos = new JPanel(new GridLayout(3, 2, 12, 6));
+        panelDatos.setOpaque(false);
+
+        lblNombreClienteFicha.setText(c.getNombreCli());
+        lblNombreClienteFicha.setFont(new Font("Segoe UI", Font.BOLD, 15));
+
+        boolean activo = "A".equalsIgnoreCase(c.getEstadoCli());
+        lblEstadoClienteFicha.setText(activo ? "CLIENTE ACTIVO" : "CLIENTE INACTIVO");
+        lblEstadoClienteFicha.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblEstadoClienteFicha.setForeground(activo ? new Color(16, 185, 129) : new Color(239, 68, 68));
+
+        int saldo = c.getSaldoPuntoCli() != null ? c.getSaldoPuntoCli().intValue() : 0;
+        lblSaldoPuntosFicha.setText("Saldo: " + saldo + " pts");
+        lblSaldoPuntosFicha.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblSaldoPuntosFicha.setForeground(new Color(16, 185, 129));
+
+        lblDpiClienteFicha.setText("DPI: " + (c.getDpiCli() != null ? FormatoTexto.formatearDpi(c.getDpiCli()) : "S/D"));
+        lblTelefonoClienteFicha.setText("Tel: " + (c.getTelefonoCli() != null && !c.getTelefonoCli().trim().isEmpty() ? c.getTelefonoCli() : "S/T"));
+        lblCorreoClienteFicha.setText("Correo: " + (c.getCorreoCli() != null ? c.getCorreoCli() : "-"));
+
+        panelDatos.add(lblNombreClienteFicha);
+        panelDatos.add(lblSaldoPuntosFicha);
+        panelDatos.add(lblDpiClienteFicha);
+        panelDatos.add(lblEstadoClienteFicha);
+        panelDatos.add(lblTelefonoClienteFicha);
+        panelDatos.add(lblCorreoClienteFicha);
+
+        JPanel panelBotonesFicha = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 8));
+        panelBotonesFicha.setOpaque(false);
+        btnPedidoConCliente.setPreferredSize(new Dimension(180, 36));
+        btnCanjeConCliente.setPreferredSize(new Dimension(160, 36));
+
+        btnPedidoConCliente.setEnabled(activo);
+        btnCanjeConCliente.setEnabled(activo);
+
+        panelBotonesFicha.add(btnPedidoConCliente);
+        panelBotonesFicha.add(btnCanjeConCliente);
+
+        panelContenidoFicha.add(panelDatos, BorderLayout.CENTER);
+        panelContenidoFicha.add(panelBotonesFicha, BorderLayout.SOUTH);
+        panelContenidoFicha.revalidate();
+        panelContenidoFicha.repaint();
+    }
+
+    private void limpiarBusquedaCliente() {
+        txtDpiBusqueda.setText("");
+        mostrarFichaCliente(null);
+    }
+
+    private void iniciarPedidoConClienteActual() {
+        if (clienteConsultado == null) {
+            return;
+        }
+        PedidoView ventana = new PedidoView(this, clienteConsultado);
+        ventana.setVisible(true);
+    }
+
+    private void iniciarCanjeConClienteActual() {
+        if (clienteConsultado == null) {
+            return;
+        }
+        CanjeView ventana = new CanjeView(this, clienteConsultado);
+        ventana.setVisible(true);
     }
 
     private void cargarMetricas() {
         try {
             List<Cliente> clientes = clienteService.listar();
             List<Pedidos> pedidos = pedidoService.listar();
+            int totalPuntos = 0;
+            for (Cliente c : clientes) {
+                if (c.getSaldoPuntoCli() != null) {
+                    totalPuntos += c.getSaldoPuntoCli().intValue();
+                }
+            }
+            int totalCanjes = canjesService.listar().size();
 
             lblTotalClientes.setText(String.valueOf(clientes.size()));
             lblTotalPedidos.setText(String.valueOf(pedidos.size()));
-
-            BigDecimal puntosTotales = BigDecimal.ZERO;
-            for (Cliente c : clientes) {
-                if (c.getSaldoPuntoCli() != null) {
-                    puntosTotales = puntosTotales.add(c.getSaldoPuntoCli());
-                }
-            }
-            lblTotalPuntos.setText(puntosTotales.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString() + " pts");
+            lblTotalPuntos.setText(totalPuntos + " pts");
+            lblTotalCanjes.setText(String.valueOf(totalCanjes));
         } catch (RuntimeException ex) {
             lblTotalClientes.setText("0");
             lblTotalPedidos.setText("0");
             lblTotalPuntos.setText("0 pts");
+            lblTotalCanjes.setText("0");
         }
     }
 
-    private void cargarTabla() {
-        modeloTabla.setRowCount(0);
+    private void cargarUltimosPedidos() {
+        modeloUltimosPedidos.setRowCount(0);
         try {
-            List<Cliente> clientes = clienteService.listar();
-            for (Cliente c : clientes) {
-                modeloTabla.addRow(new Object[]{
-                        c.getIdCli(),
-                        c.getDpiCli(),
-                        c.getNombreCli(),
-                        c.getDireccionCli(),
-                        c.getTelefonoCli(),
-                        c.getSaldoPuntoCli(),
-                        "A".equalsIgnoreCase(c.getEstadoCli()) ? "ACTIVO" : "INACTIVO"
+            List<Pedidos> pedidos = pedidoService.listar();
+            Collections.reverse(pedidos);
+            int limite = Math.min(pedidos.size(), 8);
+            for (int i = 0; i < limite; i++) {
+                Pedidos p = pedidos.get(i);
+                Cliente c = clienteService.buscarClientePorId(p.getIdCliPed());
+                String nombreCli = c != null ? c.getNombreCli() : "Cliente #" + p.getIdCliPed();
+                String fechaTexto = p.getFechaPed() != null ? p.getFechaPed().format(formateadorFecha) : "";
+                String estadoTexto = "P".equalsIgnoreCase(p.getEstadoPed()) ? "Pendiente" :
+                        ("C".equalsIgnoreCase(p.getEstadoPed()) ? "Cobrado" :
+                                ("A".equalsIgnoreCase(p.getEstadoPed()) ? "Anulado" : "Entregado"));
+
+                modeloUltimosPedidos.addRow(new Object[]{
+                        p.getIdPed(),
+                        nombreCli,
+                        "Q " + (p.getTotalPed() != null ? p.getTotalPed().toPlainString() : "0.00"),
+                        p.getPuntosObtenidosPed() + " pts",
+                        estadoTexto,
+                        fechaTexto
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar la lista de clientes: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void filtrarTabla() {
-        String texto = txtBuscar.getText().trim();
-        if (texto.isEmpty()) {
-            clasificador.setRowFilter(null);
-        } else {
-            clasificador.setRowFilter(RowFilter.regexFilter("(?i)" + java.util.regex.Pattern.quote(texto)));
-        }
-    }
-
-    private void seleccionarClienteDeFila() {
-        int fila = tabla.getSelectedRow();
-        if (fila == -1) {
-            clienteSeleccionado = null;
-            btnPedido.setEnabled(false);
-            lblEstadoSeleccion.setText("Seleccione un cliente para iniciar un pedido");
-            lblEstadoSeleccion.putClientProperty("FlatLaf.style", "[light]foreground: #64748b; [dark]foreground: #bd93f9");
-            return;
-        }
-        int filaModelo = tabla.convertRowIndexToModel(fila);
-        int idCli = (int) modeloTabla.getValueAt(filaModelo, 0);
-        clienteSeleccionado = clienteService.buscarClientePorId(idCli);
-
-        if (clienteSeleccionado != null) {
-            btnPedido.setEnabled(true);
-            lblEstadoSeleccion.setText("✓ " + clienteSeleccionado.getNombreCli());
-            lblEstadoSeleccion.putClientProperty("FlatLaf.style", "[light]foreground: #059669; [dark]foreground: #50fa7b");
         }
     }
 
     private void abrirPedido() {
-        if (clienteSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Por favor seleccione un cliente de la tabla antes de iniciar un pedido.",
-                    "Aviso", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        PedidoView ventana = new PedidoView(this, clienteSeleccionado);
+        PedidoView ventana = new PedidoView(this, clienteConsultado);
+        ventana.setVisible(true);
+    }
+
+    private void abrirCanjes() {
+        CanjeView ventana = new CanjeView(this, clienteConsultado);
         ventana.setVisible(true);
     }
 
@@ -304,12 +420,11 @@ public class DashboardView extends JFrame {
         new PagoView(this).setVisible(true);
     }
 
-    private void abrirAdministracion() {
-        new AdministracionView(this).setVisible(true);
+    private void abrirAdministracionCliente() {
+        new ClienteView(this).setVisible(true);
     }
 
-    private void abrirAdministracionCliente() {
-        ClienteView ventana = new ClienteView(this);
-        ventana.setVisible(true);
+    private void abrirAdministracion() {
+        new AdministracionView(this).setVisible(true);
     }
 }
