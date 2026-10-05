@@ -14,6 +14,7 @@ public class AdministracionView extends JFrame {
     private final JButton btnIrProducto = new JButton("Gestionar Productos", Icons.shoppingBag(16));
     private final JButton btnIrSandwich = new JButton("Gestionar Sándwiches", Icons.utensils(16));
     private final JButton btnIrMenu = new JButton("Gestionar Combos", Icons.menu(16));
+    private final JButton btnIrReportes = new JButton("Reportes", Icons.receipt(16));
     private final JButton btnRegresar = new JButton("Volver al Inicio", Icons.arrowLeft(16));
 
     private final Window parent;
@@ -26,8 +27,8 @@ public class AdministracionView extends JFrame {
 
     private void iniciarComponentes() {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(800, 480);
-        setMinimumSize(new Dimension(740, 440));
+        setSize(880, 520);
+        setMinimumSize(new Dimension(820, 480));
         setLocationRelativeTo(parent);
         setLayout(new BorderLayout(16, 16));
         getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
@@ -41,37 +42,43 @@ public class AdministracionView extends JFrame {
         lblTitulo.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #0f172a; [dark]foreground: #f8f8f2");
         panelPrincipal.add(lblTitulo, BorderLayout.NORTH);
 
-        JPanel panelTarjetas = new JPanel(new GridLayout(2, 2, 16, 16));
+        JPanel panelTarjetas = new JPanel(new GridLayout(3, 2, 16, 16));
         panelTarjetas.setOpaque(false);
 
         FabricaDaisyUI.aplicarBotonSecundario(btnIrCategoria);
         FabricaDaisyUI.aplicarBotonPrimario(btnIrProducto);
         FabricaDaisyUI.aplicarBotonAcento(btnIrSandwich);
         FabricaDaisyUI.aplicarBotonPrimario(btnIrMenu);
+        FabricaDaisyUI.aplicarBotonAcento(btnIrReportes);
         FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
         btnIrCategoria.setPreferredSize(new Dimension(195, 38));
         btnIrProducto.setPreferredSize(new Dimension(195, 38));
         btnIrSandwich.setPreferredSize(new Dimension(195, 38));
         btnIrMenu.setPreferredSize(new Dimension(195, 38));
+        btnIrReportes.setPreferredSize(new Dimension(195, 38));
         btnRegresar.setPreferredSize(new Dimension(175, 38));
 
         btnIrCategoria.setIconTextGap(8);
         btnIrProducto.setIconTextGap(8);
         btnIrSandwich.setIconTextGap(8);
         btnIrMenu.setIconTextGap(8);
+        btnIrReportes.setIconTextGap(8);
         btnRegresar.setIconTextGap(8);
 
         btnIrCategoria.addActionListener(e -> abrirCategoria());
         btnIrProducto.addActionListener(e -> abrirProducto());
         btnIrSandwich.addActionListener(e -> abrirSandwich());
         btnIrMenu.addActionListener(e -> abrirMenu());
+        btnIrReportes.addActionListener(e -> abrirReportes());
         btnRegresar.addActionListener(e -> regresar());
 
         panelTarjetas.add(crearTarjetaModulo("Categorías", btnIrCategoria));
         panelTarjetas.add(crearTarjetaModulo("Productos", btnIrProducto));
         panelTarjetas.add(crearTarjetaModulo("Sándwiches", btnIrSandwich));
         panelTarjetas.add(crearTarjetaModulo("Combos", btnIrMenu));
+        panelTarjetas.add(crearTarjetaModulo("Reportes", btnIrReportes));
+        panelTarjetas.add(new JPanel());
 
         panelPrincipal.add(panelTarjetas, BorderLayout.CENTER);
 
@@ -117,6 +124,11 @@ public class AdministracionView extends JFrame {
 
     private void abrirMenu() {
         MenuView ventana = new MenuView(this);
+        ventana.setVisible(true);
+    }
+
+    private void abrirReportes() {
+        ReportesView ventana = new ReportesView(this);
         ventana.setVisible(true);
     }
 

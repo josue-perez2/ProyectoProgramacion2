@@ -259,9 +259,15 @@ public class FabricaDaisyUI {
     public static void estilizarCampo(JComponent campo) {
         if (campo instanceof JComboBox) {
             campo.putClientProperty(PROPIEDAD_ESTILO, "arc: 10; padding: 4,10,4,10; [light]background: #ffffff; [dark]background: #343746; [light]foreground: #0f172a; [dark]foreground: #f8f8f2; [light]border: 1,1,1,1,#cbd5e1,,10; [dark]border: 1,1,1,1,#6272a4,,10");
+        } else if (campo instanceof JSpinner) {
+            estilizarSpinner((JSpinner) campo);
         } else {
             campo.putClientProperty(PROPIEDAD_ESTILO, "arc: 10; margin: 4,12,4,12; [light]background: #ffffff; [dark]background: #343746; [light]foreground: #0f172a; [dark]foreground: #f8f8f2; [light]border: 1,1,1,1,#cbd5e1,,10; [dark]border: 1,1,1,1,#6272a4,,10; [light]placeholderForeground: #94a3b8; [dark]placeholderForeground: #6272a4");
         }
+    }
+
+    public static void estilizarSpinner(JSpinner spinner) {
+        spinner.putClientProperty(PROPIEDAD_ESTILO, "arc: 10; padding: 4,10,4,10; [light]background: #ffffff; [dark]background: #343746; [light]foreground: #0f172a; [dark]foreground: #f8f8f2; [light]border: 1,1,1,1,#cbd5e1,,10; [dark]border: 1,1,1,1,#6272a4,,10");
     }
 
     public static void aplicarCampoEstatico(JTextField campo) {
