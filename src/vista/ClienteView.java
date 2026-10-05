@@ -4,11 +4,15 @@ import model.Cliente;
 import service.ClienteService;
 import util.FormatoTexto;
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
 import javax.swing.text.AbstractDocument;
 import java.awt.*;
 import java.math.BigDecimal;
@@ -19,11 +23,11 @@ public class ClienteView extends JFrame {
 
     private final ClienteService clienteService;
 
-    private final JButton btnAgregar = new JButton("Agregar");
-    private final JButton btnModificar = new JButton("Modificar");
-    private final JButton btnEliminar = new JButton("Eliminar");
-    private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnRegresar = new JButton("← Volver");
+    private final JButton btnAgregar = FabricaDaisyUI.crearBotonPrimario("Agregar", Icons.plus(16), null);
+    private final JButton btnModificar = FabricaDaisyUI.crearBotonSecundario("Modificar", Icons.edit(16), null);
+    private final JButton btnEliminar = FabricaDaisyUI.crearBotonPeligro("Eliminar", Icons.trash(16), null);
+    private final JButton btnLimpiar = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(16), null);
+    private final JButton btnRegresar = FabricaDaisyUI.crearBotonNeutral("Volver", Icons.arrowLeft(16), null);
 
     private final Window parent;
     private Integer idClienteSeleccionado = null;
@@ -36,40 +40,38 @@ public class ClienteView extends JFrame {
     private final JTextField txtSaldo = new JTextField();
     private final JComboBox<String> cmbEstado = new JComboBox<>(new String[]{"Activo", "Inactivo"});
 
+    private final JTextField txtBuscar = FabricaDaisyUI.crearCampoTexto("Buscar por DPI o Nombre...", 25);
+    private TableRowSorter<DefaultTableModel> clasificador;
+
     private static final Pattern PATRON_CORREO = Pattern.compile("^[\\w.+-]+@[\\w-]+(\\.[\\w-]+)+$");
 
-    private final JTable tabla = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin clientes registrados";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloTabla = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tabla = new JTable(modeloTabla);
 
     public ClienteView() {
         this(null);
     }
 
     public ClienteView(Window parent) {
+        this(parent, null);
+    }
+
+    public ClienteView(Window parent, String dpiInicial) {
         super("Gestión de Clientes");
         this.parent = parent;
         this.clienteService = new ClienteService();
         iniciarComponentes();
         cargarTabla();
+        if (dpiInicial != null && !dpiInicial.trim().isEmpty()) {
+            txtDpi.setText(dpiInicial.trim());
+            txtBuscar.setText(dpiInicial.trim());
+            filtrarTabla();
+        }
         actualizarEstadoBotones(false);
     }
 
@@ -123,9 +125,46 @@ public class ClienteView extends JFrame {
         );
         panelContenedorPrincipal.add(tarjetaFormulario, BorderLayout.NORTH);
 
+        JPanel panelCentro = new JPanel(new BorderLayout(8, 8));
+        panelCentro.setOpaque(false);
+
+        JPanel panelBarraBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        panelBarraBusqueda.setOpaque(false);
+        JLabel lblBuscar = new JLabel("Buscar Cliente:");
+        lblBuscar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        txtBuscar.setPreferredSize(new Dimension(320, 34));
+        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filtrarTabla();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filtrarTabla();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filtrarTabla();
+            }
+        });
+
+        JButton btnLimpiarBusqueda = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(14), e -> {
+            txtBuscar.setText("");
+            filtrarTabla();
+        });
+        btnLimpiarBusqueda.setPreferredSize(new Dimension(120, 34));
+
+        panelBarraBusqueda.add(lblBuscar);
+        panelBarraBusqueda.add(txtBuscar);
+        panelBarraBusqueda.add(btnLimpiarBusqueda);
+
         String[] columnas = {"ID", "DPI", "Nombre", "Teléfono", "Correo", "Dirección", "Puntos", "Estado"};
         modeloTabla.setColumnIdentifiers(columnas);
+        clasificador = new TableRowSorter<>(modeloTabla);
         tabla.setModel(modeloTabla);
+        tabla.setRowSorter(clasificador);
         FabricaDaisyUI.estilizarTabla(tabla);
         tabla.getColumnModel().getColumn(7).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
 
@@ -151,10 +190,15 @@ public class ClienteView extends JFrame {
 
         JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> cargarTabla());
 
+        JPanel panelContenidoTabla = new JPanel(new BorderLayout(8, 8));
+        panelContenidoTabla.setOpaque(false);
+        panelContenidoTabla.add(panelBarraBusqueda, BorderLayout.NORTH);
+        panelContenidoTabla.add(scrollTabla, BorderLayout.CENTER);
+
         JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccionConBoton(
                 "Clientes Registrados",
                 btnRefrescar,
-                scrollTabla
+                panelContenidoTabla
         );
         panelContenedorPrincipal.add(tarjetaTabla, BorderLayout.CENTER);
 
@@ -174,6 +218,12 @@ public class ClienteView extends JFrame {
         FabricaDaisyUI.aplicarBotonNeutral(btnLimpiar);
         FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
+        btnAgregar.setIconTextGap(8);
+        btnModificar.setIconTextGap(8);
+        btnEliminar.setIconTextGap(8);
+        btnLimpiar.setIconTextGap(8);
+        btnRegresar.setIconTextGap(8);
+
         btnAgregar.addActionListener(e -> guardarCliente());
         btnModificar.addActionListener(e -> actualizarCliente());
         btnEliminar.addActionListener(e -> eliminarCliente());
@@ -188,6 +238,39 @@ public class ClienteView extends JFrame {
 
         add(panelContenedorPrincipal, BorderLayout.CENTER);
         add(panelBotones, BorderLayout.SOUTH);
+    }
+
+    private void filtrarTabla() {
+        if (clasificador == null) {
+            return;
+        }
+        String texto = txtBuscar.getText().trim();
+        if (texto.isEmpty()) {
+            clasificador.setRowFilter(null);
+            return;
+        }
+        String digitos = FormatoTexto.soloDigitos(texto);
+        clasificador.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                String dpi = entry.getStringValue(1);
+                String nombre = entry.getStringValue(2);
+                String telefono = entry.getStringValue(3);
+                String correo = entry.getStringValue(4);
+
+                if (!digitos.isEmpty()) {
+                    String dpiDigitos = FormatoTexto.soloDigitos(dpi);
+                    if (dpiDigitos != null && dpiDigitos.contains(digitos)) {
+                        return true;
+                    }
+                }
+                String q = texto.toLowerCase();
+                return dpi.toLowerCase().contains(q) ||
+                        nombre.toLowerCase().contains(q) ||
+                        telefono.toLowerCase().contains(q) ||
+                        correo.toLowerCase().contains(q);
+            }
+        });
     }
 
     private void actualizarEstadoBotones(boolean seleccionActiva) {
@@ -211,22 +294,26 @@ public class ClienteView extends JFrame {
                     "A".equalsIgnoreCase(c.getEstadoCli()) ? "ACTIVO" : "INACTIVO"
             });
         }
+        filtrarTabla();
     }
 
     private void seleccionarFila() {
         int fila = tabla.getSelectedRow();
         if (fila == -1) {
+            idClienteSeleccionado = null;
+            limpiarCamposSinDeseleccionar();
             actualizarEstadoBotones(false);
             return;
         }
-        idClienteSeleccionado = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(fila, 0)));
-        txtDpi.setText(String.valueOf(modeloTabla.getValueAt(fila, 1)));
-        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(fila, 2)));
-        txtTelefono.setText(String.valueOf(modeloTabla.getValueAt(fila, 3)));
-        txtCorreo.setText(String.valueOf(modeloTabla.getValueAt(fila, 4)));
-        txtDireccion.setText(String.valueOf(modeloTabla.getValueAt(fila, 5)));
-        txtSaldo.setText(String.valueOf(modeloTabla.getValueAt(fila, 6)));
-        String estadoFila = String.valueOf(modeloTabla.getValueAt(fila, 7));
+        int filaModelo = tabla.convertRowIndexToModel(fila);
+        idClienteSeleccionado = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(filaModelo, 0)));
+        txtDpi.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 1)));
+        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 2)));
+        txtTelefono.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 3)));
+        txtCorreo.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 4)));
+        txtDireccion.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 5)));
+        txtSaldo.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 6)));
+        String estadoFila = String.valueOf(modeloTabla.getValueAt(filaModelo, 7));
         cmbEstado.setSelectedItem("ACTIVO".equalsIgnoreCase(estadoFila) ? "Activo" : "Inactivo");
         actualizarEstadoBotones(true);
     }
@@ -306,10 +393,10 @@ public class ClienteView extends JFrame {
 
     private void eliminarCliente() {
         if (idClienteSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un cliente de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Seleccione un cliente de la tabla para eliminar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar el cliente seleccionado?", "Confirmar", JOptionPane.YES_NO_OPTION);
+        int confirmar = JOptionPane.showConfirmDialog(this, "¿Está seguro de eliminar o inactivar este cliente?", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
         if (confirmar == JOptionPane.YES_OPTION) {
             try {
                 clienteService.eliminar(idClienteSeleccionado);
@@ -360,8 +447,7 @@ public class ClienteView extends JFrame {
         return new BigDecimal(saldo);
     }
 
-    private void limpiarFormulario() {
-        idClienteSeleccionado = null;
+    private void limpiarCamposSinDeseleccionar() {
         txtDpi.setText("");
         txtNombre.setText("");
         txtTelefono.setText("");
@@ -369,6 +455,11 @@ public class ClienteView extends JFrame {
         txtDireccion.setText("");
         txtSaldo.setText("0");
         cmbEstado.setSelectedItem("Activo");
+    }
+
+    private void limpiarFormulario() {
+        idClienteSeleccionado = null;
+        limpiarCamposSinDeseleccionar();
         tabla.clearSelection();
         actualizarEstadoBotones(false);
     }

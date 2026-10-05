@@ -8,6 +8,7 @@ import service.ProductoService;
 import service.SandwichService;
 import util.CategoriasItem;
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
@@ -27,14 +28,14 @@ public class SandwichView extends JFrame {
     private final Window parent;
     private Integer idSandwichSeleccionado = null;
 
-    private final JButton btnAgregar = new JButton("Agregar");
-    private final JButton btnModificar = new JButton("Modificar");
-    private final JButton btnEliminar = new JButton("Eliminar");
-    private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnRegresar = new JButton("← Volver");
+    private final JButton btnAgregar = FabricaDaisyUI.crearBotonPrimario("Agregar", Icons.plus(16), null);
+    private final JButton btnModificar = FabricaDaisyUI.crearBotonSecundario("Modificar", Icons.edit(16), null);
+    private final JButton btnEliminar = FabricaDaisyUI.crearBotonPeligro("Eliminar", Icons.trash(16), null);
+    private final JButton btnLimpiar = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(16), null);
+    private final JButton btnRegresar = FabricaDaisyUI.crearBotonNeutral("Volver", Icons.arrowLeft(16), null);
 
-    private final JButton btnAgregarDetalle = new JButton("+ Agregar");
-    private final JButton btnQuitarDetalle = new JButton("- Quitar");
+    private final JButton btnAgregarDetalle = FabricaDaisyUI.crearBotonPrimario("Agregar", Icons.plus(14), null);
+    private final JButton btnQuitarDetalle = FabricaDaisyUI.crearBotonPeligro("Quitar", Icons.trash(14), null);
 
     private final JTextField txtCodigo = new JTextField();
     private final JTextField txtNombre = new JTextField();
@@ -45,49 +46,21 @@ public class SandwichView extends JFrame {
     private final JTextField txtCantidad = new JTextField();
     private final JComboBox<String> cmbObligatorio = new JComboBox<>(new String[]{"Incluido", "Opcional"});
 
-    private final JTable tabla = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin sándwiches registrados";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloTabla = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tabla = new JTable(modeloTabla);
 
-    private final JTable tablaDetalle = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Seleccione un sándwich para ver sus ingredientes";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloDetalle = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tablaDetalle = new JTable(modeloDetalle);
 
     private List<Integer> idsProductoPan = new ArrayList<>();
 
@@ -162,8 +135,10 @@ public class SandwichView extends JFrame {
         JPanel panelDetalleAcciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 2));
         panelDetalleAcciones.setOpaque(false);
 
-        btnAgregarDetalle.setPreferredSize(new Dimension(160, 34));
-        btnQuitarDetalle.setPreferredSize(new Dimension(160, 34));
+        btnAgregarDetalle.setIconTextGap(6);
+        btnQuitarDetalle.setIconTextGap(6);
+        btnAgregarDetalle.setPreferredSize(new Dimension(140, 34));
+        btnQuitarDetalle.setPreferredSize(new Dimension(140, 34));
 
         FabricaDaisyUI.aplicarBotonPrimario(btnAgregarDetalle);
         FabricaDaisyUI.aplicarBotonPeligro(btnQuitarDetalle);
@@ -269,6 +244,12 @@ public class SandwichView extends JFrame {
         FabricaDaisyUI.aplicarBotonNeutral(btnLimpiar);
         FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
+        btnAgregar.setIconTextGap(8);
+        btnModificar.setIconTextGap(8);
+        btnEliminar.setIconTextGap(8);
+        btnLimpiar.setIconTextGap(8);
+        btnRegresar.setIconTextGap(8);
+
         btnAgregar.addActionListener(e -> guardarSandwich());
         btnModificar.addActionListener(e -> actualizarSandwich());
         btnEliminar.addActionListener(e -> eliminarSandwich());
@@ -358,17 +339,30 @@ public class SandwichView extends JFrame {
     private void seleccionarFila() {
         int fila = tabla.getSelectedRow();
         if (fila == -1) {
+            idSandwichSeleccionado = null;
+            limpiarCamposSinDeseleccionar();
             actualizarEstadoBotones(false);
             return;
         }
-        idSandwichSeleccionado = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(fila, 0)));
-        txtCodigo.setText(String.valueOf(modeloTabla.getValueAt(fila, 1)));
-        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(fila, 2)));
-        txtPrecio.setText(String.valueOf(modeloTabla.getValueAt(fila, 3)));
-        String activoFila = String.valueOf(modeloTabla.getValueAt(fila, 4));
+        int filaModelo = tabla.convertRowIndexToModel(fila);
+        idSandwichSeleccionado = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(filaModelo, 0)));
+        txtCodigo.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 1)));
+        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 2)));
+        txtPrecio.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 3)));
+        String activoFila = String.valueOf(modeloTabla.getValueAt(filaModelo, 4));
         cmbActivo.setSelectedItem("ACTIVO".equalsIgnoreCase(activoFila) ? "Activo" : "Inactivo");
         cargarDetalle(idSandwichSeleccionado);
         actualizarEstadoBotones(true);
+    }
+
+    private void limpiarCamposSinDeseleccionar() {
+        txtCodigo.setText("");
+        txtNombre.setText("");
+        txtPrecio.setText("0.00");
+        cmbActivo.setSelectedItem("Activo");
+        txtCantidad.setText("1");
+        cmbObligatorio.setSelectedItem("Incluido");
+        modeloDetalle.setRowCount(0);
     }
 
     private void guardarSandwich() {

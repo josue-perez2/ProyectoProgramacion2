@@ -1,6 +1,7 @@
 package vista;
 
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
@@ -9,11 +10,11 @@ import java.awt.*;
 
 public class AdministracionView extends JFrame {
 
-    private final JButton btnIrCategoria = new JButton("Gestionar Categorías");
-    private final JButton btnIrProducto = new JButton("Gestionar Productos");
-    private final JButton btnIrSandwich = new JButton("Gestionar Sándwiches");
-    private final JButton btnIrMenu = new JButton("Gestionar Combos");
-    private final JButton btnRegresar = new JButton("← Volver al Inicio");
+    private final JButton btnIrCategoria = new JButton("Gestionar Categorías", Icons.menu(16));
+    private final JButton btnIrProducto = new JButton("Gestionar Productos", Icons.shoppingBag(16));
+    private final JButton btnIrSandwich = new JButton("Gestionar Sándwiches", Icons.utensils(16));
+    private final JButton btnIrMenu = new JButton("Gestionar Combos", Icons.menu(16));
+    private final JButton btnRegresar = new JButton("Volver al Inicio", Icons.arrowLeft(16));
 
     private final Window parent;
 
@@ -49,11 +50,17 @@ public class AdministracionView extends JFrame {
         FabricaDaisyUI.aplicarBotonPrimario(btnIrMenu);
         FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
-        btnIrCategoria.setPreferredSize(new Dimension(185, 38));
-        btnIrProducto.setPreferredSize(new Dimension(185, 38));
-        btnIrSandwich.setPreferredSize(new Dimension(185, 38));
-        btnIrMenu.setPreferredSize(new Dimension(185, 38));
-        btnRegresar.setPreferredSize(new Dimension(170, 38));
+        btnIrCategoria.setPreferredSize(new Dimension(195, 38));
+        btnIrProducto.setPreferredSize(new Dimension(195, 38));
+        btnIrSandwich.setPreferredSize(new Dimension(195, 38));
+        btnIrMenu.setPreferredSize(new Dimension(195, 38));
+        btnRegresar.setPreferredSize(new Dimension(175, 38));
+
+        btnIrCategoria.setIconTextGap(8);
+        btnIrProducto.setIconTextGap(8);
+        btnIrSandwich.setIconTextGap(8);
+        btnIrMenu.setIconTextGap(8);
+        btnRegresar.setIconTextGap(8);
 
         btnIrCategoria.addActionListener(e -> abrirCategoria());
         btnIrProducto.addActionListener(e -> abrirProducto());

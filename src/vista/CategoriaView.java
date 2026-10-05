@@ -3,6 +3,7 @@ package vista;
 import model.Categorias;
 import service.CategoriaService;
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
@@ -15,38 +16,24 @@ public class CategoriaView extends JFrame {
 
     private final CategoriaService categoriaService;
 
-    private final JButton btnAgregar = new JButton("Agregar");
-    private final JButton btnModificar = new JButton("Modificar");
-    private final JButton btnEliminar = new JButton("Eliminar");
-    private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnRegresar = new JButton("← Volver");
+    private final JButton btnAgregar = FabricaDaisyUI.crearBotonPrimario("Agregar", Icons.plus(16), null);
+    private final JButton btnModificar = FabricaDaisyUI.crearBotonSecundario("Modificar", Icons.edit(16), null);
+    private final JButton btnEliminar = FabricaDaisyUI.crearBotonPeligro("Eliminar", Icons.trash(16), null);
+    private final JButton btnLimpiar = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(16), null);
+    private final JButton btnRegresar = FabricaDaisyUI.crearBotonNeutral("Volver", Icons.arrowLeft(16), null);
 
     private final Window parent;
     private Integer idCategoriaSeleccionada = null;
 
     private final JTextField txtNombre = new JTextField();
 
-    private final JTable tabla = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin categorías registradas";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloTabla = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tabla = new JTable(modeloTabla);
 
     public CategoriaView() {
         this(null);
@@ -132,6 +119,12 @@ public class CategoriaView extends JFrame {
         FabricaDaisyUI.aplicarBotonNeutral(btnLimpiar);
         FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
+        btnAgregar.setIconTextGap(8);
+        btnModificar.setIconTextGap(8);
+        btnEliminar.setIconTextGap(8);
+        btnLimpiar.setIconTextGap(8);
+        btnRegresar.setIconTextGap(8);
+
         btnAgregar.addActionListener(e -> guardarCategoria());
         btnModificar.addActionListener(e -> actualizarCategoria());
         btnEliminar.addActionListener(e -> eliminarCategoria());
@@ -168,11 +161,14 @@ public class CategoriaView extends JFrame {
     private void seleccionarFila() {
         int fila = tabla.getSelectedRow();
         if (fila == -1) {
+            idCategoriaSeleccionada = null;
+            txtNombre.setText("");
             actualizarEstadoBotones(false);
             return;
         }
-        idCategoriaSeleccionada = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(fila, 0)));
-        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(fila, 1)));
+        int filaModelo = tabla.convertRowIndexToModel(fila);
+        idCategoriaSeleccionada = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(filaModelo, 0)));
+        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 1)));
         actualizarEstadoBotones(true);
     }
 

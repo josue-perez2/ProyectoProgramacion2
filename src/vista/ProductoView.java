@@ -5,6 +5,7 @@ import model.Productos;
 import service.CategoriaService;
 import service.ProductoService;
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
@@ -25,11 +26,11 @@ public class ProductoView extends JFrame {
     private final Window parent;
     private Integer idProductoSeleccionado = null;
 
-    private final JButton btnAgregar = new JButton("Agregar");
-    private final JButton btnModificar = new JButton("Modificar");
-    private final JButton btnEliminar = new JButton("Eliminar");
-    private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnRegresar = new JButton("← Volver");
+    private final JButton btnAgregar = FabricaDaisyUI.crearBotonPrimario("Agregar", Icons.plus(16), null);
+    private final JButton btnModificar = FabricaDaisyUI.crearBotonSecundario("Modificar", Icons.edit(16), null);
+    private final JButton btnEliminar = FabricaDaisyUI.crearBotonPeligro("Eliminar", Icons.trash(16), null);
+    private final JButton btnLimpiar = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(16), null);
+    private final JButton btnRegresar = FabricaDaisyUI.crearBotonNeutral("Volver", Icons.arrowLeft(16), null);
 
     private final JTextField txtCodigo = new JTextField();
     private final JTextField txtNombre = new JTextField();
@@ -41,27 +42,13 @@ public class ProductoView extends JFrame {
     private final List<Integer> idsCategoria = new ArrayList<>();
     private final Map<Integer, String> nombresCategoria = new HashMap<>();
 
-    private final JTable tabla = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin productos registrados";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloTabla = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tabla = new JTable(modeloTabla);
 
     public ProductoView(Window parent) {
         super("Gestión de Productos");
@@ -172,6 +159,12 @@ public class ProductoView extends JFrame {
         FabricaDaisyUI.aplicarBotonNeutral(btnLimpiar);
         FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
+        btnAgregar.setIconTextGap(8);
+        btnModificar.setIconTextGap(8);
+        btnEliminar.setIconTextGap(8);
+        btnLimpiar.setIconTextGap(8);
+        btnRegresar.setIconTextGap(8);
+
         btnAgregar.addActionListener(e -> guardarProducto());
         btnModificar.addActionListener(e -> actualizarProducto());
         btnEliminar.addActionListener(e -> eliminarProducto());
@@ -235,18 +228,32 @@ public class ProductoView extends JFrame {
     private void seleccionarFila() {
         int fila = tabla.getSelectedRow();
         if (fila == -1) {
+            idProductoSeleccionado = null;
+            limpiarCamposSinDeseleccionar();
             actualizarEstadoBotones(false);
             return;
         }
-        idProductoSeleccionado = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(fila, 0)));
-        txtCodigo.setText(String.valueOf(modeloTabla.getValueAt(fila, 1)));
-        seleccionarCategoria(String.valueOf(modeloTabla.getValueAt(fila, 2)));
-        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(fila, 3)));
-        txtPrecio.setText(String.valueOf(modeloTabla.getValueAt(fila, 4)));
-        txtExistencia.setText(String.valueOf(modeloTabla.getValueAt(fila, 5)));
-        String activoFila = String.valueOf(modeloTabla.getValueAt(fila, 6));
+        int filaModelo = tabla.convertRowIndexToModel(fila);
+        idProductoSeleccionado = Integer.parseInt(String.valueOf(modeloTabla.getValueAt(filaModelo, 0)));
+        txtCodigo.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 1)));
+        seleccionarCategoria(String.valueOf(modeloTabla.getValueAt(filaModelo, 2)));
+        txtNombre.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 3)));
+        txtPrecio.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 4)));
+        txtExistencia.setText(String.valueOf(modeloTabla.getValueAt(filaModelo, 5)));
+        String activoFila = String.valueOf(modeloTabla.getValueAt(filaModelo, 6));
         cmbActivo.setSelectedItem("ACTIVO".equalsIgnoreCase(activoFila) ? "Activo" : "Inactivo");
         actualizarEstadoBotones(true);
+    }
+
+    private void limpiarCamposSinDeseleccionar() {
+        txtCodigo.setText("");
+        txtNombre.setText("");
+        txtPrecio.setText("0.00");
+        txtExistencia.setText("0.00");
+        if (cmbCategoria.getItemCount() > 0) {
+            cmbCategoria.setSelectedIndex(0);
+        }
+        cmbActivo.setSelectedItem("Activo");
     }
 
     private void seleccionarCategoria(String nombre) {
