@@ -48,9 +48,23 @@ public class CanjesDaoImpl implements CanjesDao {
                 if (rs.next()) {
                     canjes.setIdCan(rs.getInt(1));
                 }
+            } catch (Exception ignored) {
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);
+        }
+        if (canjes.getIdCan() == 0) {
+            String sqlMax = "SELECT NVL(MAX(ID_CAN), 1) FROM CANJES WHERE ID_CLI_CAN = ?";
+            try (Connection conn = conexion.conectar();
+                 PreparedStatement psMax = conn.prepareStatement(sqlMax)) {
+                psMax.setInt(1, canjes.getIdCliCan());
+                try (ResultSet rsMax = psMax.executeQuery()) {
+                    if (rsMax.next()) {
+                        canjes.setIdCan(rsMax.getInt(1));
+                    }
+                }
+            } catch (Exception ignored) {
+            }
         }
     }
 
