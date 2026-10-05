@@ -12,12 +12,15 @@ import service.MenuService;
 import service.PedidoService;
 import service.ProductoService;
 import service.SandwichService;
+import util.FormatoTexto;
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
+import javax.swing.text.AbstractDocument;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -41,9 +44,16 @@ public class PedidoView extends JFrame {
 
     private final Window parent;
     private final Cliente clienteInicial;
+    private Cliente clienteActual = null;
     private Integer idPedidoSeleccionado = null;
 
-    private final JComboBox<String> cmbCliente = new JComboBox<>();
+    private final JTextField txtDpiCliente = FabricaDaisyUI.crearCampoTexto("DPI", 13);
+    private final JButton btnBuscarCliente = FabricaDaisyUI.crearBotonPrimario("Buscar", Icons.search(16), e -> buscarClientePorDpi());
+    private final JButton btnNuevoCliente = FabricaDaisyUI.crearBotonAcento("Registrar", Icons.plus(16), e -> registrarNuevoCliente());
+    private final JLabel lblNombreCliente = new JLabel("Ningún cliente seleccionado");
+    private final JLabel lblSaldoPuntos = new JLabel("Saldo: 0 pts");
+    private final JLabel lblTelefonoCliente = new JLabel("Tel: -");
+
     private final JTextField txtFecha = new JTextField();
     private final JTextField txtTotal = new JTextField();
     private final JTextField txtPuntosObtenidos = new JTextField();
@@ -54,18 +64,17 @@ public class PedidoView extends JFrame {
     private final JTextField txtCantidad = new JTextField();
     private final JTextField txtPrecioUnitario = new JTextField();
 
-    private final JButton btnGuardar = new JButton("Guardar Pedido");
-    private final JButton btnCobrar = new JButton("Cobrar / Pagar");
-    private final JButton btnVerFactura = new JButton("Ver Factura");
-    private final JButton btnModificar = new JButton("Modificar");
-    private final JButton btnEliminar = new JButton("Eliminar");
-    private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnRegresar = new JButton("← Volver");
+    private final JButton btnGuardar = FabricaDaisyUI.crearBotonPrimario("Guardar Pedido", Icons.save(16), null);
+    private final JButton btnCobrar = FabricaDaisyUI.crearBotonSecundario("Cobrar / Pagar", Icons.creditCard(16), null);
+    private final JButton btnVerFactura = FabricaDaisyUI.crearBotonAcento("Ver Factura", Icons.receipt(16), null);
+    private final JButton btnModificar = FabricaDaisyUI.crearBotonNeutral("Modificar", Icons.edit(16), null);
+    private final JButton btnEliminar = FabricaDaisyUI.crearBotonPeligro("Eliminar", Icons.trash(16), null);
+    private final JButton btnLimpiar = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(16), null);
+    private final JButton btnRegresar = FabricaDaisyUI.crearBotonNeutral("Volver", Icons.arrowLeft(16), null);
 
-    private final JButton btnAgregarItem = new JButton("+ Agregar Item");
-    private final JButton btnQuitarItem = new JButton("- Quitar Item");
+    private final JButton btnAgregarItem = FabricaDaisyUI.crearBotonPrimario("Agregar", Icons.plus(14), null);
+    private final JButton btnQuitarItem = FabricaDaisyUI.crearBotonPeligro("Quitar", Icons.trash(14), null);
 
-    private final List<Integer> idsCliente = new ArrayList<>();
     private final List<Integer> idsSandwich = new ArrayList<>();
     private final List<BigDecimal> preciosSandwich = new ArrayList<>();
     private final List<Integer> idsMenu = new ArrayList<>();
@@ -75,49 +84,21 @@ public class PedidoView extends JFrame {
 
     private final DateTimeFormatter formateadorFecha = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private final JTable tablaPedidos = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin pedidos registrados";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloPedidos = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tablaPedidos = new JTable(modeloPedidos);
 
-    private final JTable tablaDetalle = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Seleccione un pedido para ver su detalle";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloDetalle = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tablaDetalle = new JTable(modeloDetalle);
 
     public PedidoView() {
         this(null, null);
@@ -139,11 +120,14 @@ public class PedidoView extends JFrame {
         this.productoService = new ProductoService();
 
         iniciarComponentes();
-        cargarClientes();
         cargarCatalogosItems();
         actualizarComboItems();
         cargarTablaPedidos();
-        seleccionarClienteInicial();
+        if (clienteInicial != null) {
+            asignarClienteActual(clienteInicial);
+        } else {
+            asignarClienteActual(null);
+        }
         actualizarEstadoBotones(false, false);
     }
 
@@ -159,8 +143,43 @@ public class PedidoView extends JFrame {
         panelContenedorNorte.setBorder(BorderFactory.createEmptyBorder(12, 16, 6, 16));
         panelContenedorNorte.setOpaque(false);
 
-        JPanel panelCamposPedido = new JPanel(new GridLayout(3, 2, 12, 8));
-        panelCamposPedido.setOpaque(false);
+        ((AbstractDocument) txtDpiCliente.getDocument()).setDocumentFilter(FormatoTexto.filtroDpi());
+        txtDpiCliente.setPreferredSize(new Dimension(170, 36));
+        txtDpiCliente.addActionListener(e -> buscarClientePorDpi());
+
+        btnBuscarCliente.setPreferredSize(new Dimension(88, 36));
+        btnNuevoCliente.setPreferredSize(new Dimension(98, 36));
+
+        JPanel panelDpiFila = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+        panelDpiFila.setOpaque(false);
+        JLabel lblDpiTag = new JLabel("DPI:");
+        lblDpiTag.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        panelDpiFila.add(lblDpiTag);
+        txtDpiCliente.setPreferredSize(new Dimension(160, 36));
+        btnBuscarCliente.setPreferredSize(new Dimension(110, 36));
+        btnNuevoCliente.setPreferredSize(new Dimension(125, 36));
+        panelDpiFila.add(txtDpiCliente);
+        panelDpiFila.add(btnBuscarCliente);
+        panelDpiFila.add(btnNuevoCliente);
+
+        JPanel panelInfoCliente = new JPanel(new GridLayout(2, 2, 8, 4));
+        panelInfoCliente.setOpaque(false);
+        panelInfoCliente.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(1, 0, 1, 0, TemaGestor.esModoOscuro() ? new Color(68, 71, 90) : new Color(226, 232, 240)),
+                BorderFactory.createEmptyBorder(6, 4, 6, 4)
+        ));
+
+        lblNombreCliente.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblSaldoPuntos.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblSaldoPuntos.setForeground(new Color(16, 185, 129));
+        lblTelefonoCliente.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+
+        panelInfoCliente.add(lblNombreCliente);
+        panelInfoCliente.add(lblSaldoPuntos);
+        panelInfoCliente.add(lblTelefonoCliente);
+
+        JPanel panelDatosPedido = new JPanel(new GridLayout(2, 2, 12, 8));
+        panelDatosPedido.setOpaque(false);
 
         txtFecha.setPreferredSize(new Dimension(160, 36));
         txtTotal.setText("0.00");
@@ -172,20 +191,22 @@ public class PedidoView extends JFrame {
         FabricaDaisyUI.aplicarCampoEstatico(txtTotal);
         FabricaDaisyUI.aplicarCampoEstatico(txtPuntosObtenidos);
 
-        cmbCliente.setPreferredSize(new Dimension(280, 36));
         cmbEstado.setPreferredSize(new Dimension(160, 36));
-
-        FabricaDaisyUI.estilizarCampo(cmbCliente);
         FabricaDaisyUI.estilizarCampo(cmbEstado);
 
-        panelCamposPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Cliente Registrado:", cmbCliente));
-        panelCamposPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Estado del Pedido:", cmbEstado));
-        panelCamposPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Fecha y Hora:", txtFecha));
-        panelCamposPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Total a Pagar (Q):", txtTotal));
-        panelCamposPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Puntos Obtenidos:", txtPuntosObtenidos));
+        panelDatosPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Estado del Pedido:", cmbEstado));
+        panelDatosPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Fecha y Hora:", txtFecha));
+        panelDatosPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Total a Pagar (Q):", txtTotal));
+        panelDatosPedido.add(FabricaDaisyUI.crearCampoConEtiqueta("Puntos que Generará:", txtPuntosObtenidos));
+
+        JPanel panelCamposPedido = new JPanel(new BorderLayout(8, 8));
+        panelCamposPedido.setOpaque(false);
+        panelCamposPedido.add(panelDpiFila, BorderLayout.NORTH);
+        panelCamposPedido.add(panelInfoCliente, BorderLayout.CENTER);
+        panelCamposPedido.add(panelDatosPedido, BorderLayout.SOUTH);
 
         JPanel tarjetaPedido = FabricaDaisyUI.crearTarjetaSeccion(
-                "Datos del Pedido",
+                "Cliente y Datos del Pedido",
                 panelCamposPedido
         );
         panelContenedorNorte.add(tarjetaPedido);
@@ -223,6 +244,8 @@ public class PedidoView extends JFrame {
 
         btnAgregarItem.setPreferredSize(new Dimension(145, 34));
         btnQuitarItem.setPreferredSize(new Dimension(145, 34));
+        btnAgregarItem.setIconTextGap(8);
+        btnQuitarItem.setIconTextGap(8);
 
         FabricaDaisyUI.aplicarBotonPrimario(btnAgregarItem);
         FabricaDaisyUI.aplicarBotonPeligro(btnQuitarItem);
@@ -280,7 +303,12 @@ public class PedidoView extends JFrame {
         scrollPedidos.setBorder(BorderFactory.createEmptyBorder());
 
         JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
-            cargarClientes();
+            if (clienteActual != null) {
+                Cliente ref = clienteService.buscarClientePorId(clienteActual.getIdCli());
+                if (ref != null) {
+                    asignarClienteActual(ref);
+                }
+            }
             cargarCatalogosItems();
             cargarTablaPedidos();
         });
@@ -331,13 +359,21 @@ public class PedidoView extends JFrame {
         panelBotones.setBorder(BorderFactory.createEmptyBorder(4, 16, 12, 16));
         panelBotones.setOpaque(false);
 
-        btnGuardar.setPreferredSize(new Dimension(145, 38));
+        btnGuardar.setPreferredSize(new Dimension(150, 38));
         btnCobrar.setPreferredSize(new Dimension(150, 38));
         btnVerFactura.setPreferredSize(new Dimension(145, 38));
         btnModificar.setPreferredSize(new Dimension(135, 38));
         btnEliminar.setPreferredSize(new Dimension(135, 38));
         btnLimpiar.setPreferredSize(new Dimension(130, 38));
         btnRegresar.setPreferredSize(new Dimension(130, 38));
+
+        btnGuardar.setIconTextGap(8);
+        btnCobrar.setIconTextGap(8);
+        btnVerFactura.setIconTextGap(8);
+        btnModificar.setIconTextGap(8);
+        btnEliminar.setIconTextGap(8);
+        btnLimpiar.setIconTextGap(8);
+        btnRegresar.setIconTextGap(8);
 
         FabricaDaisyUI.aplicarBotonPrimario(btnGuardar);
         FabricaDaisyUI.aplicarBotonSecundario(btnCobrar);
@@ -397,30 +433,61 @@ public class PedidoView extends JFrame {
         }
     }
 
-    private void cargarClientes() {
-        cmbCliente.removeAllItems();
-        idsCliente.clear();
-        try {
-            List<Cliente> clientes = clienteService.listar();
-            for (Cliente c : clientes) {
-                cmbCliente.addItem(c.getNombreCli());
-                idsCliente.add(c.getIdCli());
-            }
-        } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudieron cargar los clientes: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void seleccionarClienteInicial() {
-        if (clienteInicial == null) {
+    private void buscarClientePorDpi() {
+        String textoDpi = txtDpiCliente.getText().trim();
+        String soloDigitos = FormatoTexto.soloDigitos(textoDpi);
+        if (soloDigitos.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor ingrese el número de DPI del cliente a buscar.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        for (int i = 0; i < idsCliente.size(); i++) {
-            if (idsCliente.get(i) == clienteInicial.getIdCli()) {
-                cmbCliente.setSelectedIndex(i);
-                return;
+        Cliente c = clienteService.buscarPorDpi(soloDigitos);
+        if (c == null) {
+            int opcion = JOptionPane.showConfirmDialog(
+                    this,
+                    "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al cliente ahora?",
+                    "Cliente No Encontrado",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+            if (opcion == JOptionPane.YES_OPTION) {
+                new ClienteView(this, soloDigitos).setVisible(true);
             }
+            return;
+        }
+        if (!"A".equalsIgnoreCase(c.getEstadoCli())) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "El cliente " + c.getNombreCli() + " se encuentra INACTIVO.\nNo es posible registrar pedidos a clientes inactivos.",
+                    "Cliente Inactivo",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            asignarClienteActual(null);
+            return;
+        }
+        asignarClienteActual(c);
+    }
+
+    private void registrarNuevoCliente() {
+        String textoDpi = FormatoTexto.soloDigitos(txtDpiCliente.getText().trim());
+        new ClienteView(this, textoDpi).setVisible(true);
+    }
+
+    private void asignarClienteActual(Cliente c) {
+        this.clienteActual = c;
+        if (c != null) {
+            txtDpiCliente.setText(c.getDpiCli() != null ? FormatoTexto.formatearDpi(c.getDpiCli()) : "");
+            lblNombreCliente.setText("Cliente: " + c.getNombreCli());
+            lblNombreCliente.setForeground(TemaGestor.esModoOscuro() ? new Color(248, 250, 252) : new Color(15, 23, 42));
+            lblTelefonoCliente.setText("Tel: " + (c.getTelefonoCli() != null && !c.getTelefonoCli().trim().isEmpty() ? c.getTelefonoCli() : "S/T"));
+            int saldo = c.getSaldoPuntoCli() != null ? c.getSaldoPuntoCli().intValue() : 0;
+            lblSaldoPuntos.setText("Saldo: " + saldo + " pts");
+            lblSaldoPuntos.setForeground(new Color(16, 185, 129));
+        } else {
+            lblNombreCliente.setText("Ningún cliente seleccionado");
+            lblNombreCliente.setForeground(Color.GRAY);
+            lblTelefonoCliente.setText("Tel: -");
+            lblSaldoPuntos.setText("Saldo: 0 pts");
+            lblSaldoPuntos.setForeground(Color.GRAY);
         }
     }
 
@@ -538,18 +605,24 @@ public class PedidoView extends JFrame {
     private void seleccionarFilaPedido() {
         int fila = tablaPedidos.getSelectedRow();
         if (fila == -1) {
+            idPedidoSeleccionado = null;
+            limpiarCamposSinDeseleccionar();
             actualizarEstadoBotones(false, false);
             return;
         }
-        int idPed = (int) modeloPedidos.getValueAt(fila, 0);
+        int filaModelo = tablaPedidos.convertRowIndexToModel(fila);
+        int idPed = (int) modeloPedidos.getValueAt(filaModelo, 0);
         Pedidos p = pedidoService.buscarPorId(idPed);
         if (p == null) {
+            idPedidoSeleccionado = null;
+            limpiarCamposSinDeseleccionar();
             actualizarEstadoBotones(false, false);
             return;
         }
 
         idPedidoSeleccionado = p.getIdPed();
-        seleccionarClientePorId(p.getIdCliPed());
+        Cliente c = clienteService.buscarClientePorId(p.getIdCliPed());
+        asignarClienteActual(c);
         txtFecha.setText(p.getFechaPed() != null ? p.getFechaPed().format(formateadorFecha) : "");
         txtTotal.setText(p.getTotalPed().toPlainString());
         txtPuntosObtenidos.setText(String.valueOf(p.getPuntosObtenidosPed()));
@@ -558,15 +631,6 @@ public class PedidoView extends JFrame {
         cargarDetalle(idPed);
         boolean bloqueado = "C".equalsIgnoreCase(p.getEstadoPed()) || "A".equalsIgnoreCase(p.getEstadoPed());
         actualizarEstadoBotones(true, bloqueado);
-    }
-
-    private void seleccionarClientePorId(int idCli) {
-        for (int i = 0; i < idsCliente.size(); i++) {
-            if (idsCliente.get(i) == idCli) {
-                cmbCliente.setSelectedIndex(i);
-                return;
-            }
-        }
     }
 
     private void cargarDetalle(int idPed) {
@@ -626,22 +690,34 @@ public class PedidoView extends JFrame {
     }
 
     private void guardarPedido() {
-        if (cmbCliente.getSelectedIndex() == -1) {
-            JOptionPane.showMessageDialog(this, "Debe seleccionar un cliente.", "Aviso", JOptionPane.WARNING_MESSAGE);
+        if (clienteActual == null) {
+            JOptionPane.showMessageDialog(this, "Debe buscar y seleccionar un cliente activo antes de guardar el pedido.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        if (!"A".equalsIgnoreCase(clienteActual.getEstadoCli())) {
+            JOptionPane.showMessageDialog(this, "El cliente seleccionado se encuentra inactivo. No se pueden registrar pedidos.", "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
         try {
             Pedidos pedido = new Pedidos();
-            pedido.setIdCliPed(idsCliente.get(cmbCliente.getSelectedIndex()));
+            pedido.setIdCliPed(clienteActual.getIdCli());
             pedido.setFechaPed(LocalDateTime.now());
             pedido.setTotalPed(BigDecimal.ZERO);
             pedido.setPuntosObtenidosPed(0);
             pedido.setEstadoPed(estadoAbreviado((String) cmbEstado.getSelectedItem()));
 
             pedidoService.insertar(pedido);
+            int idGenerado = pedido.getIdPed();
+            if (idGenerado <= 0 && clienteActual != null) {
+                List<Pedidos> lista = pedidoService.listarPorCliente(clienteActual.getIdCli());
+                if (!lista.isEmpty()) {
+                    idGenerado = lista.get(0).getIdPed();
+                    pedido.setIdPed(idGenerado);
+                }
+            }
             JOptionPane.showMessageDialog(this, "Pedido creado correctamente. Ahora puede agregarle items.");
             cargarTablaPedidos();
-            seleccionarEnTabla(pedido.getIdPed());
+            seleccionarEnTabla(idGenerado);
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Error al guardar pedido: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -656,19 +732,24 @@ public class PedidoView extends JFrame {
             JOptionPane.showMessageDialog(this, "No se puede modificar un pedido que ya está pagado o anulado.", "Operación Bloqueada", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        if (clienteActual == null) {
+            JOptionPane.showMessageDialog(this, "Debe buscar y seleccionar un cliente para el pedido.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
         try {
-            Pedidos pedido = pedidoService.buscarPorId(idPedidoSeleccionado);
+            int idPed = idPedidoSeleccionado;
+            Pedidos pedido = pedidoService.buscarPorId(idPed);
             if (pedido == null) {
                 JOptionPane.showMessageDialog(this, "El pedido no fue encontrado.", "Aviso", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-            pedido.setIdCliPed(idsCliente.get(cmbCliente.getSelectedIndex()));
+            pedido.setIdCliPed(clienteActual.getIdCli());
             pedido.setEstadoPed(estadoAbreviado((String) cmbEstado.getSelectedItem()));
 
             pedidoService.actualizar(pedido);
             JOptionPane.showMessageDialog(this, "Pedido actualizado correctamente.");
             cargarTablaPedidos();
-            seleccionarEnTabla(idPedidoSeleccionado);
+            seleccionarEnTabla(idPed);
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Error al actualizar pedido: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -687,8 +768,9 @@ public class PedidoView extends JFrame {
                 "Confirmar", JOptionPane.YES_NO_OPTION);
         if (confirmar == JOptionPane.YES_OPTION) {
             try {
-                detallePedidoService.eliminarPorPedido(idPedidoSeleccionado);
-                pedidoService.eliminar(idPedidoSeleccionado);
+                int idPed = idPedidoSeleccionado;
+                detallePedidoService.eliminarPorPedido(idPed);
+                pedidoService.eliminar(idPed);
                 JOptionPane.showMessageDialog(this, "Pedido eliminado correctamente.");
                 cargarTablaPedidos();
                 limpiarFormulario();
@@ -731,11 +813,19 @@ public class PedidoView extends JFrame {
         int idItem = tipoIndex == 0 ? idsSandwich.get(itemIndex) : (tipoIndex == 1 ? idsMenu.get(itemIndex) : idsProducto.get(itemIndex));
         BigDecimal precioUnitario = new BigDecimal(txtPrecioUnitario.getText().trim());
         BigDecimal subtotal = precioUnitario.multiply(cantidad);
-        int puntosGenerados = subtotal.divide(BigDecimal.valueOf(10), 0, RoundingMode.DOWN).intValue();
+        int puntosGenerados = 0;
+        if (TIPO_SANDWICH.equals(tipoCodigo)) {
+            puntosGenerados = cantidad.intValue() * 2;
+        } else if (TIPO_MENU.equals(tipoCodigo)) {
+            puntosGenerados = cantidad.intValue() * 8;
+        } else {
+            puntosGenerados = 0;
+        }
 
         try {
+            int idPed = idPedidoSeleccionado;
             DetallesPedido detalle = new DetallesPedido();
-            detalle.setIdPedDet(idPedidoSeleccionado);
+            detalle.setIdPedDet(idPed);
             detalle.setTipoItemDet(tipoCodigo);
             detalle.setIdItemDet(idItem);
             detalle.setCantidadDet(cantidad);
@@ -744,10 +834,10 @@ public class PedidoView extends JFrame {
             detalle.setPuntosGeneradosDet(puntosGenerados);
 
             detallePedidoService.insertar(detalle);
-            recalcularTotalesPedido(idPedidoSeleccionado);
-            cargarDetalle(idPedidoSeleccionado);
+            recalcularTotalesPedido(idPed);
+            cargarDetalle(idPed);
             cargarTablaPedidos();
-            seleccionarEnTabla(idPedidoSeleccionado);
+            seleccionarEnTabla(idPed);
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Error al agregar item: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -765,11 +855,12 @@ public class PedidoView extends JFrame {
         }
         int idDet = (int) modeloDetalle.getValueAt(fila, 0);
         try {
+            int idPed = idPedidoSeleccionado;
             detallePedidoService.eliminar(idDet);
-            recalcularTotalesPedido(idPedidoSeleccionado);
-            cargarDetalle(idPedidoSeleccionado);
+            recalcularTotalesPedido(idPed);
+            cargarDetalle(idPed);
             cargarTablaPedidos();
-            seleccionarEnTabla(idPedidoSeleccionado);
+            seleccionarEnTabla(idPed);
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this, "Error al quitar item: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
@@ -794,28 +885,41 @@ public class PedidoView extends JFrame {
         }
     }
 
-    private void seleccionarEnTabla(int idPed) {
+    private void seleccionarEnTabla(Integer idPed) {
+        if (idPed == null) {
+            return;
+        }
         for (int i = 0; i < modeloPedidos.getRowCount(); i++) {
-            if ((int) modeloPedidos.getValueAt(i, 0) == idPed) {
-                tablaPedidos.setRowSelectionInterval(i, i);
-                tablaPedidos.scrollRectToVisible(tablaPedidos.getCellRect(i, 0, true));
+            Object val = modeloPedidos.getValueAt(i, 0);
+            if (val != null && val.toString().equals(idPed.toString())) {
+                int filaVista = tablaPedidos.convertRowIndexToView(i);
+                if (filaVista != -1) {
+                    tablaPedidos.setRowSelectionInterval(filaVista, filaVista);
+                    tablaPedidos.scrollRectToVisible(tablaPedidos.getCellRect(filaVista, 0, true));
+                }
                 return;
             }
         }
     }
 
-    private void limpiarFormulario() {
-        idPedidoSeleccionado = null;
+    private void limpiarCamposSinDeseleccionar() {
         txtFecha.setText("");
         txtTotal.setText("0.00");
         txtPuntosObtenidos.setText("0");
         cmbEstado.setSelectedItem("Pendiente");
         txtCantidad.setText("1");
-        tablaPedidos.clearSelection();
         modeloDetalle.setRowCount(0);
         if (clienteInicial != null) {
-            seleccionarClienteInicial();
+            asignarClienteActual(clienteInicial);
+        } else {
+            asignarClienteActual(null);
         }
+    }
+
+    private void limpiarFormulario() {
+        idPedidoSeleccionado = null;
+        limpiarCamposSinDeseleccionar();
+        tablaPedidos.clearSelection();
         actualizarEstadoBotones(false, false);
     }
 

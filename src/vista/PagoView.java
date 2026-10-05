@@ -7,6 +7,7 @@ import service.ClienteService;
 import service.PagoService;
 import service.PedidoService;
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
@@ -39,11 +40,11 @@ public class PagoView extends JFrame {
     private final JTextField txtCambio = new JTextField();
     private final JTextField txtReferencia = new JTextField();
 
-    private final JButton btnProcesar = new JButton("Procesar Pago");
-    private final JButton btnVerFactura = new JButton("Ver Factura");
-    private final JButton btnEliminar = new JButton("Eliminar");
-    private final JButton btnLimpiar = new JButton("Limpiar");
-    private final JButton btnRegresar = new JButton("← Volver");
+    private final JButton btnProcesar = FabricaDaisyUI.crearBotonPrimario("Procesar Pago", Icons.creditCard(16), null);
+    private final JButton btnVerFactura = FabricaDaisyUI.crearBotonAcento("Ver Factura", Icons.receipt(16), null);
+    private final JButton btnEliminar = FabricaDaisyUI.crearBotonPeligro("Eliminar", Icons.trash(16), null);
+    private final JButton btnLimpiar = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(16), null);
+    private final JButton btnRegresar = FabricaDaisyUI.crearBotonNeutral("Volver", Icons.arrowLeft(16), null);
 
     private final List<Integer> idsPedido = new ArrayList<>();
     private final List<BigDecimal> totalesPedido = new ArrayList<>();
@@ -52,27 +53,13 @@ public class PagoView extends JFrame {
 
     private final DateTimeFormatter formateadorFecha = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    private final JTable tablaPagos = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin pagos registrados";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
     private final DefaultTableModel modeloPagos = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
         }
     };
+    private final JTable tablaPagos = new JTable(modeloPagos);
 
     public PagoView() {
         this(null, null);
@@ -222,6 +209,12 @@ public class PagoView extends JFrame {
         btnEliminar.setPreferredSize(new Dimension(135, 38));
         btnLimpiar.setPreferredSize(new Dimension(130, 38));
         btnRegresar.setPreferredSize(new Dimension(130, 38));
+
+        btnProcesar.setIconTextGap(8);
+        btnVerFactura.setIconTextGap(8);
+        btnEliminar.setIconTextGap(8);
+        btnLimpiar.setIconTextGap(8);
+        btnRegresar.setIconTextGap(8);
 
         FabricaDaisyUI.aplicarBotonPrimario(btnProcesar);
         FabricaDaisyUI.aplicarBotonAcento(btnVerFactura);
@@ -375,20 +368,24 @@ public class PagoView extends JFrame {
         int fila = tablaPagos.getSelectedRow();
         if (fila == -1) {
             idPagoSeleccionado = null;
+            txtReferencia.setText("");
+            cmbMetodoPago.setSelectedIndex(0);
+            seleccionarPedidoDeCombo();
             actualizarEstadoBotones(false);
             return;
         }
-        idPagoSeleccionado = (int) modeloPagos.getValueAt(fila, 0);
-        int idPed = (int) modeloPagos.getValueAt(fila, 1);
+        int filaModelo = tablaPagos.convertRowIndexToModel(fila);
+        idPagoSeleccionado = (int) modeloPagos.getValueAt(filaModelo, 0);
+        int idPed = (int) modeloPagos.getValueAt(filaModelo, 1);
         for (int i = 0; i < idsPedido.size(); i++) {
             if (idsPedido.get(i) == idPed) {
                 cmbPedido.setSelectedIndex(i);
                 break;
             }
         }
-        cmbMetodoPago.setSelectedItem(String.valueOf(modeloPagos.getValueAt(fila, 3)));
-        txtMontoRecibido.setText(String.valueOf(modeloPagos.getValueAt(fila, 4)));
-        txtReferencia.setText(String.valueOf(modeloPagos.getValueAt(fila, 6)));
+        cmbMetodoPago.setSelectedItem(String.valueOf(modeloPagos.getValueAt(filaModelo, 3)));
+        txtMontoRecibido.setText(String.valueOf(modeloPagos.getValueAt(filaModelo, 4)));
+        txtReferencia.setText(String.valueOf(modeloPagos.getValueAt(filaModelo, 6)));
         actualizarEstadoBotones(true);
     }
 

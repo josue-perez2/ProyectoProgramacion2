@@ -15,6 +15,7 @@ import service.PedidoService;
 import service.ProductoService;
 import service.SandwichService;
 import vista.util.FabricaDaisyUI;
+import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.imageio.ImageIO;
@@ -47,9 +48,9 @@ public class FacturaView extends JDialog {
 
     private final int idPedido;
     private final PanelTicket panelTicket;
-    private final JButton btnImprimir = new JButton("Imprimir Factura");
-    private final JButton btnGuardar = new JButton("Guardar Imagen");
-    private final JButton btnCerrar = new JButton("← Volver");
+    private final JButton btnImprimir = new JButton("Imprimir", Icons.receipt(16));
+    private final JButton btnGuardar = new JButton("Guardar Imagen", Icons.save(16));
+    private final JButton btnCerrar = new JButton("Volver", Icons.arrowLeft(16));
 
     private final DateTimeFormatter formateador = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
@@ -108,14 +109,17 @@ public class FacturaView extends JDialog {
         panelBotones.putClientProperty("FlatLaf.style", "[light]border: 1,0,0,0,#cbd5e1; [dark]border: 1,0,0,0,#44475a");
 
         btnImprimir.setPreferredSize(new Dimension(145, 38));
+        btnImprimir.setIconTextGap(8);
         FabricaDaisyUI.aplicarBotonSecundario(btnImprimir);
         btnImprimir.addActionListener(e -> imprimirFactura());
 
         btnGuardar.setPreferredSize(new Dimension(145, 38));
+        btnGuardar.setIconTextGap(8);
         FabricaDaisyUI.aplicarBotonPrimario(btnGuardar);
         btnGuardar.addActionListener(e -> guardarComoImagen());
 
         btnCerrar.setPreferredSize(new Dimension(145, 38));
+        btnCerrar.setIconTextGap(8);
         FabricaDaisyUI.aplicarBotonNeutral(btnCerrar);
         btnCerrar.addActionListener(e -> dispose());
 
@@ -276,7 +280,7 @@ public class FacturaView extends JDialog {
             String dirCli = (cliente != null && cliente.getDireccionCli() != null) ? cliente.getDireccionCli() : "Ciudad";
 
             add(crearFilaTexto("CLIENTE:", nombreCli, fuenteMonoBold, colorTexto));
-            add(crearFilaTexto("NIT / DPI:", dpiCli, fuenteMono, colorTexto));
+            add(crearFilaTexto("DPI:", dpiCli, fuenteMono, colorTexto));
             add(crearFilaTexto("DIRECCIÓN:", dirCli, fuenteMono, colorTexto));
 
             add(crearSeparadorSimple());
