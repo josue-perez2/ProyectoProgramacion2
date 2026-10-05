@@ -25,19 +25,64 @@ public class ClienteService {
     }
 
     public void insertar(Cliente cliente) {
+        if (cliente == null) {
+            throw new IllegalArgumentException("El cliente no puede ser nulo.");
+        }
+        if (cliente.getDpiCli() != null && !cliente.getDpiCli().isBlank()) {
+            Cliente conDpi = buscarPorDpi(cliente.getDpiCli().trim());
+            if (conDpi != null) {
+                throw new IllegalStateException("Ya existe un cliente registrado con el DPI " + cliente.getDpiCli().trim() + ".");
+            }
+        }
+        if (cliente.getCorreoCli() != null && !cliente.getCorreoCli().isBlank()) {
+            Cliente conCorreo = buscarPorCorreo(cliente.getCorreoCli().trim());
+            if (conCorreo != null) {
+                throw new IllegalStateException("Ya existe un cliente registrado con el correo " + cliente.getCorreoCli().trim() + ".");
+            }
+        }
         clienteDao.insertar(cliente);
     }
 
     public void actualizar(Cliente cliente) {
+        if (cliente == null) {
+            throw new IllegalArgumentException("El cliente no puede ser nulo.");
+        }
+        Cliente existente = buscarClientePorId(cliente.getIdCli());
+        if (existente == null) {
+            throw new IllegalStateException("No se puede modificar: el cliente con ID " + cliente.getIdCli() + " no existe.");
+        }
+        if (cliente.getDpiCli() != null && !cliente.getDpiCli().isBlank()) {
+            Cliente conDpi = buscarPorDpi(cliente.getDpiCli().trim());
+            if (conDpi != null && conDpi.getIdCli() != cliente.getIdCli()) {
+                throw new IllegalStateException("El DPI " + cliente.getDpiCli().trim() + " ya está asignado a otro cliente.");
+            }
+        }
+        if (cliente.getCorreoCli() != null && !cliente.getCorreoCli().isBlank()) {
+            Cliente conCorreo = buscarPorCorreo(cliente.getCorreoCli().trim());
+            if (conCorreo != null && conCorreo.getIdCli() != cliente.getIdCli()) {
+                throw new IllegalStateException("El correo " + cliente.getCorreoCli().trim() + " ya está asignado a otro cliente.");
+            }
+        }
         clienteDao.actualizar(cliente);
     }
 
     public void eliminar(int id) {
+        Cliente existente = buscarClientePorId(id);
+        if (existente == null) {
+            throw new IllegalStateException("No se puede eliminar: el cliente con ID " + id + " no existe.");
+        }
         clienteDao.eliminar(id);
     }
 
     public void integridad(int id) {
         clienteDao.integridad(id);
+    }
+
+    public Cliente buscarPorDpi(String dpi) {
+        if (dpi == null || dpi.isBlank()) {
+            return null;
+        }
+        return clienteDao.buscarPorDpi(dpi);
     }
 
     public Cliente buscarPorCorreo(String correo) {

@@ -57,37 +57,48 @@ public class PagoService {
 
     public void revertirPago(int id) {
         Pagos pago = pagosDao.buscarPorId(id);
-        if (pago != null) {
-            Pedidos pedido = pedidosDao.buscarPorId(pago.getIdPedPag());
-            if (pedido != null) {
-                pedido.setEstadoPed("P");
-                pedidosDao.actualizar(pedido);
-                if (pedido.getPuntosObtenidosPed() > 0) {
-                    Cliente cliente = clienteDao.buscarClientePorId(pedido.getIdCliPed());
-                    if (cliente != null && cliente.getSaldoPuntoCli() != null) {
-                        BigDecimal puntosRestar = new BigDecimal(pedido.getPuntosObtenidosPed());
-                        BigDecimal nuevoSaldo = cliente.getSaldoPuntoCli().subtract(puntosRestar);
-                        if (nuevoSaldo.compareTo(BigDecimal.ZERO) < 0) {
-                            nuevoSaldo = BigDecimal.ZERO;
-                        }
-                        cliente.setSaldoPuntoCli(nuevoSaldo);
-                        clienteDao.actualizar(cliente);
-
-                        HistorialPuntos his = new HistorialPuntos();
-                        his.setIdCliHis(cliente.getIdCli());
-                        his.setFechaHis(LocalDateTime.now());
-                        his.setTipoOperacionHis("S");
-                        his.setPuntosHis(-pedido.getPuntosObtenidosPed());
-                        his.setReferenciaHis("Anulacion de Pago Pedido #" + pedido.getIdPed());
-                        historialPuntosDao.insertar(his);
+        if (pago == null) {
+            throw new IllegalStateException("No se puede eliminar: el registro de pago con ID " + id + " no existe.");
+        }
+        Pedidos pedido = pedidosDao.buscarPorId(pago.getIdPedPag());
+        if (pedido != null) {
+            pedido.setEstadoPed("P");
+            pedidosDao.actualizar(pedido);
+            if (pedido.getPuntosObtenidosPed() > 0) {
+                Cliente cliente = clienteDao.buscarClientePorId(pedido.getIdCliPed());
+                if (cliente != null && cliente.getSaldoPuntoCli() != null) {
+                    BigDecimal puntosRestar = new BigDecimal(pedido.getPuntosObtenidosPed());
+                    BigDecimal nuevoSaldo = cliente.getSaldoPuntoCli().subtract(puntosRestar);
+                    if (nuevoSaldo.compareTo(BigDecimal.ZERO) < 0) {
+                        nuevoSaldo = BigDecimal.ZERO;
                     }
+                    cliente.setSaldoPuntoCli(nuevoSaldo);
+                    clienteDao.actualizar(cliente);
+
+                    HistorialPuntos his = new HistorialPuntos();
+                    his.setIdCliHis(cliente.getIdCli());
+                    his.setFechaHis(LocalDateTime.now());
+                    his.setTipoOperacionHis("S");
+                    his.setPuntosHis(-pedido.getPuntosObtenidosPed());
+                    his.setReferenciaHis("Anulacion de Pago Pedido #" + pedido.getIdPed());
+                    historialPuntosDao.insertar(his);
                 }
             }
-            pagosDao.eliminar(id);
         }
+        pagosDao.eliminar(id);
     }
 
     public void procesarPago(Pagos pago, Pedidos pedido, Cliente cliente) {
+        if (pago == null || pedido == null) {
+            throw new IllegalArgumentException("El pago y el pedido son obligatorios.");
+        }
+        if ("C".equalsIgnoreCase(pedido.getEstadoPed())) {
+            throw new IllegalStateException("El pedido #" + pedido.getIdPed() + " ya se encuentra pagado/cobrado.");
+        }
+        Pagos pagoExistente = buscarPorPedido(pedido.getIdPed());
+        if (pagoExistente != null) {
+            throw new IllegalStateException("El pedido #" + pedido.getIdPed() + " ya cuenta con un pago registrado (ID: " + pagoExistente.getIdPad() + ").");
+        }
         pagosDao.insertar(pago);
 
         pedido.setEstadoPed("C");
