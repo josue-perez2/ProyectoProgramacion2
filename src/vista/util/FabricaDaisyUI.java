@@ -14,38 +14,160 @@ public class FabricaDaisyUI {
     public static final String PROPIEDAD_PLACEHOLDER = "JTextField.placeholderText";
     public static final String PROPIEDAD_LIMPIAR = "JTextField.showClearButton";
 
-    public static final String ESTILO_BOTON_PRIMARIO = "arc: 12; background: #10b981; foreground: #ffffff; hoverBackground: #059669; font: bold 12; margin: 6,18,6,18";
-    public static final String ESTILO_BOTON_SECUNDARIO = "arc: 12; background: #6366f1; foreground: #ffffff; hoverBackground: #4f46e5; font: bold 12; margin: 6,18,6,18";
-    public static final String ESTILO_BOTON_ACENTO = "arc: 12; background: #f59e0b; foreground: #ffffff; hoverBackground: #d97706; font: bold 12; margin: 6,18,6,18";
-    public static final String ESTILO_BOTON_PELIGRO = "arc: 12; background: #ef4444; foreground: #ffffff; hoverBackground: #dc2626; font: bold 12; margin: 6,18,6,18";
-    public static final String ESTILO_BOTON_NEUTRAL = "arc: 12; font: bold 12; margin: 6,18,6,18; [light]background: #f1f5f9; [light]foreground: #0f172a; [light]border: 1,1,1,1,#cbd5e1,,12; [light]hoverBackground: #e2e8f0; [dark]background: #44475a; [dark]foreground: #f8f8f2; [dark]border: 1,1,1,1,#6272a4,,12; [dark]hoverBackground: #6272a4";
-    public static final String ESTILO_BOTON_FANTASMA = "arc: 12; font: bold 12; margin: 6,18,6,18; background: #00000000; [light]foreground: #334155; [light]hoverBackground: #e2e8f0; [dark]foreground: #f8f8f2; [dark]hoverBackground: #44475a";
+    public static final String ESTILO_BOTON_PRIMARIO = "arc: 999; background: #10b981; foreground: #ffffff; hoverBackground: #059669; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#059669,,999";
+    public static final String ESTILO_BOTON_SECUNDARIO = "arc: 999; background: #6366f1; foreground: #ffffff; hoverBackground: #4f46e5; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#4f46e5,,999";
+    public static final String ESTILO_BOTON_ACENTO = "arc: 999; background: #f59e0b; foreground: #ffffff; hoverBackground: #d97706; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#d97706,,999";
+    public static final String ESTILO_BOTON_PELIGRO = "arc: 999; background: #ef4444; foreground: #ffffff; hoverBackground: #dc2626; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#dc2626,,999";
+    public static final String ESTILO_BOTON_NEUTRAL = "arc: 999; font: bold 12; margin: 6,18,6,18; [light]background: #ffffff; [light]foreground: #0f172a; [light]border: 1,1,1,1,#cbd5e1,,999; [light]hoverBackground: #f8fafc; [dark]background: #343746; [dark]foreground: #f8f8f2; [dark]border: 1,1,1,1,#6272a4,,999; [dark]hoverBackground: #44475a";
+    public static final String ESTILO_BOTON_FANTASMA = "arc: 999; font: bold 12; margin: 6,18,6,18; background: #00000000; [light]foreground: #334155; [light]hoverBackground: #e2e8f0; [dark]foreground: #f8f8f2; [dark]hoverBackground: #44475a";
+
+    public enum TipoBoton { PRIMARIO, SECUNDARIO, ACENTO, PELIGRO, NEUTRAL }
+
+    public static class BotonElevado extends JButton {
+        private final TipoBoton tipo;
+
+        public BotonElevado(String texto, Icon icono, TipoBoton tipo) {
+            super(texto, icono);
+            this.tipo = tipo;
+            setOpaque(false);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setCursor(new Cursor(Cursor.HAND_CURSOR));
+            setFont(new Font("Segoe UI", Font.BOLD, 12));
+            if (icono != null) {
+                setIconTextGap(8);
+            }
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            try {
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+                boolean oscuro = TemaGestor.esModoOscuro();
+                boolean hover = getModel().isRollover();
+                boolean pressed = getModel().isPressed();
+                boolean enabled = isEnabled();
+
+                int x = 2;
+                int y = pressed ? 3 : 1;
+                int w = getWidth() - 4;
+                int h = getHeight() - 5;
+                if (w <= 0 || h <= 0) return;
+                int radio = h;
+
+                if (enabled) {
+                    int a1 = hover ? 32 : 18;
+                    int a2 = hover ? 20 : 10;
+                    g2.setColor(new Color(0, 0, 0, a2));
+                    g2.fillRoundRect(x, y + 3, w, h, radio, radio);
+                    g2.setColor(new Color(0, 0, 0, a1));
+                    g2.fillRoundRect(x, y + 1, w, h, radio, radio);
+                }
+
+                Color bg;
+                Color border;
+                Color fg;
+
+                switch (tipo) {
+                    case PRIMARIO:
+                        bg = hover ? new Color(5, 150, 105) : new Color(16, 185, 129);
+                        border = hover ? new Color(4, 120, 87) : new Color(5, 150, 105);
+                        fg = Color.WHITE;
+                        break;
+                    case SECUNDARIO:
+                        bg = hover ? new Color(79, 70, 229) : new Color(99, 102, 241);
+                        border = hover ? new Color(67, 56, 202) : new Color(79, 70, 229);
+                        fg = Color.WHITE;
+                        break;
+                    case ACENTO:
+                        bg = hover ? new Color(217, 119, 6) : new Color(245, 158, 11);
+                        border = hover ? new Color(180, 83, 9) : new Color(217, 119, 6);
+                        fg = Color.WHITE;
+                        break;
+                    case PELIGRO:
+                        bg = hover ? new Color(220, 38, 38) : new Color(239, 68, 68);
+                        border = hover ? new Color(185, 28, 28) : new Color(220, 38, 38);
+                        fg = Color.WHITE;
+                        break;
+                    case NEUTRAL:
+                    default:
+                        if (oscuro) {
+                            bg = hover ? new Color(68, 71, 90) : new Color(44, 47, 60);
+                            border = hover ? new Color(139, 233, 253) : new Color(98, 114, 164);
+                            fg = new Color(248, 248, 242);
+                        } else {
+                            bg = hover ? new Color(248, 250, 252) : Color.WHITE;
+                            border = hover ? new Color(148, 163, 184) : new Color(203, 213, 225);
+                            fg = new Color(15, 23, 42);
+                        }
+                        break;
+                }
+
+                if (!enabled) {
+                    bg = oscuro ? new Color(50, 52, 65) : new Color(241, 245, 249);
+                    border = oscuro ? new Color(68, 71, 90) : new Color(226, 232, 240);
+                    fg = oscuro ? new Color(120, 125, 145) : new Color(148, 163, 184);
+                }
+
+                g2.setColor(bg);
+                g2.fillRoundRect(x, y, w, h, radio, radio);
+
+                g2.setColor(border);
+                g2.setStroke(new BasicStroke(1.0f));
+                g2.drawRoundRect(x, y, w, h, radio, radio);
+
+                setForeground(fg);
+            } finally {
+                g2.dispose();
+            }
+            super.paintComponent(g);
+        }
+    }
 
     public static void aplicarBotonPrimario(JButton boton) {
+        if (boton instanceof BotonElevado) {
+            return;
+        }
         boton.putClientProperty(PROPIEDAD_ESTILO, ESTILO_BOTON_PRIMARIO);
         boton.setFocusPainted(false);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
     public static void aplicarBotonSecundario(JButton boton) {
+        if (boton instanceof BotonElevado) {
+            return;
+        }
         boton.putClientProperty(PROPIEDAD_ESTILO, ESTILO_BOTON_SECUNDARIO);
         boton.setFocusPainted(false);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
     public static void aplicarBotonAcento(JButton boton) {
+        if (boton instanceof BotonElevado) {
+            return;
+        }
         boton.putClientProperty(PROPIEDAD_ESTILO, ESTILO_BOTON_ACENTO);
         boton.setFocusPainted(false);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
     public static void aplicarBotonPeligro(JButton boton) {
+        if (boton instanceof BotonElevado) {
+            return;
+        }
         boton.putClientProperty(PROPIEDAD_ESTILO, ESTILO_BOTON_PELIGRO);
         boton.setFocusPainted(false);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
     public static void aplicarBotonNeutral(JButton boton) {
+        if (boton instanceof BotonElevado) {
+            return;
+        }
         boton.putClientProperty(PROPIEDAD_ESTILO, ESTILO_BOTON_NEUTRAL);
         boton.setFocusPainted(false);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -58,8 +180,11 @@ public class FabricaDaisyUI {
     }
 
     public static JButton crearBotonPrimario(String texto, ActionListener accion) {
-        JButton boton = new JButton(texto);
-        aplicarBotonPrimario(boton);
+        return crearBotonPrimario(texto, null, accion);
+    }
+
+    public static JButton crearBotonPrimario(String texto, Icon icono, ActionListener accion) {
+        BotonElevado boton = new BotonElevado(texto, icono, TipoBoton.PRIMARIO);
         if (accion != null) {
             boton.addActionListener(accion);
         }
@@ -67,8 +192,11 @@ public class FabricaDaisyUI {
     }
 
     public static JButton crearBotonSecundario(String texto, ActionListener accion) {
-        JButton boton = new JButton(texto);
-        aplicarBotonSecundario(boton);
+        return crearBotonSecundario(texto, null, accion);
+    }
+
+    public static JButton crearBotonSecundario(String texto, Icon icono, ActionListener accion) {
+        BotonElevado boton = new BotonElevado(texto, icono, TipoBoton.SECUNDARIO);
         if (accion != null) {
             boton.addActionListener(accion);
         }
@@ -76,8 +204,11 @@ public class FabricaDaisyUI {
     }
 
     public static JButton crearBotonAcento(String texto, ActionListener accion) {
-        JButton boton = new JButton(texto);
-        aplicarBotonAcento(boton);
+        return crearBotonAcento(texto, null, accion);
+    }
+
+    public static JButton crearBotonAcento(String texto, Icon icono, ActionListener accion) {
+        BotonElevado boton = new BotonElevado(texto, icono, TipoBoton.ACENTO);
         if (accion != null) {
             boton.addActionListener(accion);
         }
@@ -85,8 +216,11 @@ public class FabricaDaisyUI {
     }
 
     public static JButton crearBotonPeligro(String texto, ActionListener accion) {
-        JButton boton = new JButton(texto);
-        aplicarBotonPeligro(boton);
+        return crearBotonPeligro(texto, null, accion);
+    }
+
+    public static JButton crearBotonPeligro(String texto, Icon icono, ActionListener accion) {
+        BotonElevado boton = new BotonElevado(texto, icono, TipoBoton.PELIGRO);
         if (accion != null) {
             boton.addActionListener(accion);
         }
@@ -94,8 +228,11 @@ public class FabricaDaisyUI {
     }
 
     public static JButton crearBotonNeutral(String texto, ActionListener accion) {
-        JButton boton = new JButton(texto);
-        aplicarBotonNeutral(boton);
+        return crearBotonNeutral(texto, null, accion);
+    }
+
+    public static JButton crearBotonNeutral(String texto, Icon icono, ActionListener accion) {
+        BotonElevado boton = new BotonElevado(texto, icono, TipoBoton.NEUTRAL);
         if (accion != null) {
             boton.addActionListener(accion);
         }
@@ -134,7 +271,9 @@ public class FabricaDaisyUI {
     }
 
     public static JButton crearBotonRefrescar(ActionListener accion) {
-        JButton boton = new JButton("↻ Actualizar");
+        JButton boton = new JButton("Actualizar", Icons.refreshCw(14));
+        boton.setIconTextGap(6);
+        boton.setToolTipText("Actualizar y recargar datos");
         boton.putClientProperty(PROPIEDAD_ESTILO, "arc: 10; background: #10b981; foreground: #ffffff; hoverBackground: #059669; font: bold 11; margin: 4,12,4,12");
         boton.setFocusPainted(false);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -244,8 +383,8 @@ public class FabricaDaisyUI {
             this.lblTit = new JLabel(titulo.toUpperCase());
             this.lblTit.setFont(new Font("Segoe UI", Font.BOLD, 12));
 
-            lblVal.setFont(new Font("Segoe UI", Font.BOLD, 28));
-            lblVal.setBorder(new EmptyBorder(4, 2, 4, 2));
+            lblVal.setFont(new Font("Segoe UI", Font.BOLD, 22));
+            lblVal.setBorder(new EmptyBorder(2, 2, 2, 2));
 
             add(this.lblTit, BorderLayout.NORTH);
             add(lblVal, BorderLayout.CENTER);
@@ -254,14 +393,14 @@ public class FabricaDaisyUI {
 
         public void actualizarEstilo() {
             boolean oscuro = TemaGestor.esModoOscuro();
-            setBackground(oscuro ? new Color(52, 55, 70) : Color.WHITE);
+            setBackground(oscuro ? new Color(44, 47, 60) : Color.WHITE);
             Color colorBorde = oscuro ? new Color(68, 71, 90) : new Color(226, 232, 240);
             setBorder(BorderFactory.createCompoundBorder(
-                    new FlatLineBorder(new Insets(1, 1, 1, 1), colorBorde, 1, 16),
-                    new EmptyBorder(18, 22, 18, 22)
+                    new FlatLineBorder(new Insets(1, 1, 1, 1), colorBorde, 1, 14),
+                    new EmptyBorder(12, 18, 12, 18)
             ));
             if (lblTit != null) {
-                lblTit.setForeground(oscuro ? new Color(98, 114, 164) : new Color(100, 116, 139));
+                lblTit.setForeground(oscuro ? new Color(148, 163, 184) : new Color(100, 116, 139));
             }
             if (lblVal != null) {
                 lblVal.setForeground(oscuro ? acentoOscuro : acentoLuz);
