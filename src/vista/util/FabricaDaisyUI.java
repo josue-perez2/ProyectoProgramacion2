@@ -14,14 +14,15 @@ public class FabricaDaisyUI {
     public static final String PROPIEDAD_PLACEHOLDER = "JTextField.placeholderText";
     public static final String PROPIEDAD_LIMPIAR = "JTextField.showClearButton";
 
-    public static final String ESTILO_BOTON_PRIMARIO = "arc: 999; background: #10b981; foreground: #ffffff; hoverBackground: #059669; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#059669,,999";
-    public static final String ESTILO_BOTON_SECUNDARIO = "arc: 999; background: #6366f1; foreground: #ffffff; hoverBackground: #4f46e5; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#4f46e5,,999";
-    public static final String ESTILO_BOTON_ACENTO = "arc: 999; background: #f59e0b; foreground: #ffffff; hoverBackground: #d97706; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#d97706,,999";
-    public static final String ESTILO_BOTON_PELIGRO = "arc: 999; background: #ef4444; foreground: #ffffff; hoverBackground: #dc2626; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#dc2626,,999";
-    public static final String ESTILO_BOTON_NEUTRAL = "arc: 999; font: bold 12; margin: 6,18,6,18; [light]background: #ffffff; [light]foreground: #0f172a; [light]border: 1,1,1,1,#cbd5e1,,999; [light]hoverBackground: #f8fafc; [dark]background: #343746; [dark]foreground: #f8f8f2; [dark]border: 1,1,1,1,#6272a4,,999; [dark]hoverBackground: #44475a";
-    public static final String ESTILO_BOTON_FANTASMA = "arc: 999; font: bold 12; margin: 6,18,6,18; background: #00000000; [light]foreground: #334155; [light]hoverBackground: #e2e8f0; [dark]foreground: #f8f8f2; [dark]hoverBackground: #44475a";
+    public static final String ESTILO_BOTON_PRIMARIO = "arc: 10; background: #10b981; foreground: #ffffff; hoverBackground: #059669; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#059669,,10";
+    public static final String ESTILO_BOTON_SECUNDARIO = "arc: 10; background: #6366f1; foreground: #ffffff; hoverBackground: #4f46e5; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#4f46e5,,10";
+    public static final String ESTILO_BOTON_ACENTO = "arc: 10; background: #f59e0b; foreground: #ffffff; hoverBackground: #d97706; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#d97706,,10";
+    public static final String ESTILO_BOTON_PELIGRO = "arc: 10; background: #ef4444; foreground: #ffffff; hoverBackground: #dc2626; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#dc2626,,10";
+    public static final String ESTILO_BOTON_NEUTRAL = "arc: 10; font: bold 12; margin: 6,18,6,18; [light]background: #ffffff; [light]foreground: #0f172a; [light]border: 1,1,1,1,#cbd5e1,,10; [light]hoverBackground: #f8fafc; [dark]background: #343746; [dark]foreground: #f8f8f2; [dark]border: 1,1,1,1,#6272a4,,10; [dark]hoverBackground: #44475a";
+    public static final String ESTILO_BOTON_FANTASMA = "arc: 10; font: bold 12; margin: 6,18,6,18; background: #00000000; [light]foreground: #334155; [light]hoverBackground: #e2e8f0; [dark]foreground: #f8f8f2; [dark]hoverBackground: #44475a";
+    public static final String ESTILO_BOTON_TURQUESA = "arc: 10; background: #0d9488; foreground: #ffffff; hoverBackground: #0f766e; font: bold 12; margin: 6,18,6,18; border: 1,1,1,1,#0f766e,,10";
 
-    public enum TipoBoton { PRIMARIO, SECUNDARIO, ACENTO, PELIGRO, NEUTRAL }
+    public enum TipoBoton { PRIMARIO, SECUNDARIO, ACENTO, PELIGRO, NEUTRAL, TURQUESA }
 
     public static class BotonElevado extends JButton {
         private final TipoBoton tipo;
@@ -57,7 +58,12 @@ public class FabricaDaisyUI {
                 int w = getWidth() - 4;
                 int h = getHeight() - 5;
                 if (w <= 0 || h <= 0) return;
-                int radio = h;
+                int radio = 10;
+                Object propRadio = getClientProperty("Boton.radio");
+                if (propRadio instanceof Integer) {
+                    int rVal = (Integer) propRadio;
+                    radio = (rVal >= 999) ? h : rVal;
+                }
 
                 if (enabled) {
                     int a1 = hover ? 32 : 18;
@@ -76,6 +82,11 @@ public class FabricaDaisyUI {
                     case PRIMARIO:
                         bg = hover ? new Color(5, 150, 105) : new Color(16, 185, 129);
                         border = hover ? new Color(4, 120, 87) : new Color(5, 150, 105);
+                        fg = Color.WHITE;
+                        break;
+                    case TURQUESA:
+                        bg = hover ? new Color(15, 118, 110) : new Color(13, 148, 136);
+                        border = hover ? new Color(17, 94, 89) : new Color(15, 118, 110);
                         fg = Color.WHITE;
                         break;
                     case SECUNDARIO:
@@ -179,6 +190,27 @@ public class FabricaDaisyUI {
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
     }
 
+    public static void aplicarBotonTurquesa(JButton boton) {
+        if (boton instanceof BotonElevado) {
+            return;
+        }
+        boton.putClientProperty(PROPIEDAD_ESTILO, ESTILO_BOTON_TURQUESA);
+        boton.setFocusPainted(false);
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    public static JButton crearBotonTurquesa(String texto, ActionListener accion) {
+        return crearBotonTurquesa(texto, null, accion);
+    }
+
+    public static JButton crearBotonTurquesa(String texto, Icon icono, ActionListener accion) {
+        BotonElevado boton = new BotonElevado(texto, icono, TipoBoton.TURQUESA);
+        if (accion != null) {
+            boton.addActionListener(accion);
+        }
+        return boton;
+    }
+
     public static JButton crearBotonPrimario(String texto, ActionListener accion) {
         return crearBotonPrimario(texto, null, accion);
     }
@@ -277,12 +309,51 @@ public class FabricaDaisyUI {
     }
 
     public static JButton crearBotonRefrescar(ActionListener accion) {
-        JButton boton = new JButton("Actualizar", Icons.refreshCw(14));
-        boton.setIconTextGap(6);
-        boton.setToolTipText("Actualizar y recargar datos");
-        boton.putClientProperty(PROPIEDAD_ESTILO, "arc: 10; background: #10b981; foreground: #ffffff; hoverBackground: #059669; font: bold 11; margin: 4,12,4,12");
-        boton.setFocusPainted(false);
-        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return crearBotonRefrescarIcono(accion);
+    }
+
+    public static JButton crearBotonRefrescarIcono(ActionListener accion) {
+        BotonElevado boton = new BotonElevado(null, Icons.refreshCw(16), TipoBoton.TURQUESA);
+        boton.setPreferredSize(new Dimension(38, 38));
+        boton.setMinimumSize(new Dimension(38, 38));
+        boton.setMaximumSize(new Dimension(38, 38));
+        boton.setToolTipText("Actualizar datos");
+        if (accion != null) {
+            boton.addActionListener(accion);
+        }
+        return boton;
+    }
+
+    public static JButton crearBotonLimpiarFiltros(ActionListener accion) {
+        BotonElevado boton = new BotonElevado(null, Icons.filterSlash(16), TipoBoton.PELIGRO);
+        boton.setPreferredSize(new Dimension(38, 38));
+        boton.setMinimumSize(new Dimension(38, 38));
+        boton.setMaximumSize(new Dimension(38, 38));
+        boton.setToolTipText("Quitar filtros");
+        if (accion != null) {
+            boton.addActionListener(accion);
+        }
+        return boton;
+    }
+
+    public static JButton crearBotonExportarCsv(ActionListener accion) {
+        JButton boton = new JButton("Exportar CSV", Icons.download(16));
+        aplicarBotonTurquesa(boton);
+        boton.setPreferredSize(new Dimension(150, 38));
+        boton.setIconTextGap(8);
+        boton.setToolTipText("Exportar datos a archivo CSV (Excel)");
+        if (accion != null) {
+            boton.addActionListener(accion);
+        }
+        return boton;
+    }
+
+    public static JButton crearBotonExportarCsvIcono(ActionListener accion) {
+        BotonElevado boton = new BotonElevado(null, Icons.download(16), TipoBoton.TURQUESA);
+        boton.setPreferredSize(new Dimension(38, 38));
+        boton.setMinimumSize(new Dimension(38, 38));
+        boton.setMaximumSize(new Dimension(38, 38));
+        boton.setToolTipText("Exportar a archivo CSV (Excel)");
         if (accion != null) {
             boton.addActionListener(accion);
         }
@@ -325,10 +396,10 @@ public class FabricaDaisyUI {
         return crearTarjetaSeccionConBoton(titulo, null, contenido);
     }
 
-    public static JPanel crearTarjetaSeccionConBoton(String titulo, JButton botonAccion, JComponent contenido) {
+    public static JPanel crearTarjetaSeccionConBoton(String titulo, JComponent componenteAccion, JComponent contenido) {
         PanelTarjeta tarjeta = new PanelTarjeta(new BorderLayout(10, 10));
 
-        if ((titulo != null && !titulo.trim().isEmpty()) || botonAccion != null) {
+        if ((titulo != null && !titulo.trim().isEmpty()) || componenteAccion != null) {
             JPanel panelCabecera = new JPanel(new BorderLayout(8, 4));
             panelCabecera.setOpaque(false);
             panelCabecera.setBorder(new EmptyBorder(0, 0, 6, 0));
@@ -340,8 +411,8 @@ public class FabricaDaisyUI {
                 panelCabecera.add(lblTit, BorderLayout.WEST);
             }
 
-            if (botonAccion != null) {
-                panelCabecera.add(botonAccion, BorderLayout.EAST);
+            if (componenteAccion != null) {
+                panelCabecera.add(componenteAccion, BorderLayout.EAST);
             }
 
             tarjeta.add(panelCabecera, BorderLayout.NORTH);
@@ -550,6 +621,241 @@ public class FabricaDaisyUI {
 
                 g2.dispose();
             }
+        }
+    }
+
+    public enum TipoDialogo { EXITO, ADVERTENCIA, ERROR, INFORMACION, CONFIRMACION }
+
+    public static void mostrarExito(Component padre, String titulo, String mensaje) {
+        mostrarNotificacion(padre, titulo, mensaje, TipoDialogo.EXITO);
+    }
+
+    public static void mostrarAdvertencia(Component padre, String titulo, String mensaje) {
+        mostrarNotificacion(padre, titulo, mensaje, TipoDialogo.ADVERTENCIA);
+    }
+
+    public static void mostrarError(Component padre, String titulo, String mensaje) {
+        mostrarNotificacion(padre, titulo, mensaje, TipoDialogo.ERROR);
+    }
+
+    public static void mostrarInformacion(Component padre, String titulo, String mensaje) {
+        mostrarNotificacion(padre, titulo, mensaje, TipoDialogo.INFORMACION);
+    }
+
+    public static boolean mostrarConfirmacion(Component padre, String titulo, String mensaje) {
+        String textoSeguro = mensaje == null ? "" : mensaje;
+        String html = "<html><body style='width: 320px; font-family: Segoe UI, sans-serif; font-size: 11pt; line-height: 1.45;'>"
+                + textoSeguro.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+                + "</body></html>";
+        int res = JOptionPane.showConfirmDialog(
+                padre,
+                html,
+                titulo != null && !titulo.isEmpty() ? titulo : "Confirmar Acción",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE,
+                Icons.helpCircle(32)
+        );
+        return res == JOptionPane.YES_OPTION;
+    }
+
+    public static void mostrarNotificacion(Component padre, String titulo, String mensaje, TipoDialogo tipo) {
+        int tipoMensaje;
+        Icon icono;
+        switch (tipo) {
+            case EXITO:
+                tipoMensaje = JOptionPane.INFORMATION_MESSAGE;
+                icono = Icons.check(32);
+                break;
+            case ADVERTENCIA:
+                tipoMensaje = JOptionPane.WARNING_MESSAGE;
+                icono = Icons.triangleAlert(32);
+                break;
+            case ERROR:
+                tipoMensaje = JOptionPane.ERROR_MESSAGE;
+                icono = Icons.x(32);
+                break;
+            default:
+                tipoMensaje = JOptionPane.INFORMATION_MESSAGE;
+                icono = Icons.info(32);
+                break;
+        }
+        String textoSeguro = mensaje == null ? "" : mensaje;
+        String html = "<html><body style='width: 320px; font-family: Segoe UI, sans-serif; font-size: 11pt; line-height: 1.45;'>"
+                + textoSeguro.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+                + "</body></html>";
+        JOptionPane.showMessageDialog(padre, html, titulo != null && !titulo.isEmpty() ? titulo : "Aviso", tipoMensaje, icono);
+    }
+
+    public static void mostrarToast(Component padre, String mensaje, TipoDialogo tipo) {
+        ToastDaisyUI.mostrar(padre, mensaje, tipo);
+    }
+
+    public static void mostrarToastExito(Component padre, String mensaje) {
+        mostrarToast(padre, mensaje, TipoDialogo.EXITO);
+    }
+
+    public static void mostrarToastAdvertencia(Component padre, String mensaje) {
+        mostrarToast(padre, mensaje, TipoDialogo.ADVERTENCIA);
+    }
+
+    public static void mostrarToastError(Component padre, String mensaje) {
+        mostrarToast(padre, mensaje, TipoDialogo.ERROR);
+    }
+
+    public static void mostrarToastInfo(Component padre, String mensaje) {
+        mostrarToast(padre, mensaje, TipoDialogo.INFORMACION);
+    }
+
+    public static class InsigniaCircular extends JComponent {
+        private final Icon icono;
+        private final Color colorFondo;
+        private int diametro = 46;
+
+        public InsigniaCircular(Icon icono, Color colorFondo) {
+            this(icono, colorFondo, 46);
+        }
+
+        public InsigniaCircular(Icon icono, Color colorFondo, int diametro) {
+            this.icono = icono;
+            this.colorFondo = colorFondo;
+            this.diametro = diametro;
+            setOpaque(false);
+            setPreferredSize(new Dimension(diametro + 6, diametro + 6));
+            setMinimumSize(new Dimension(diametro + 6, diametro + 6));
+            setMaximumSize(new Dimension(diametro + 6, diametro + 6));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int d = diametro;
+            int x = (getWidth() - d) / 2;
+            int y = (getHeight() - d) / 2;
+            g2.setColor(colorFondo);
+            g2.fillOval(x, y, d, d);
+            if (icono != null) {
+                int ix = (getWidth() - icono.getIconWidth()) / 2;
+                int iy = (getHeight() - icono.getIconHeight()) / 2;
+                icono.paintIcon(this, g2, ix, iy);
+            }
+            g2.dispose();
+        }
+    }
+
+    private static class ToastDaisyUI extends JWindow {
+        private final Timer temporizador;
+
+        private ToastDaisyUI(Window owner, String mensaje, TipoDialogo tipo) {
+            super(owner);
+            setAlwaysOnTop(true);
+            setBackground(new Color(0, 0, 0, 0));
+
+            boolean oscuro = TemaGestor.esModoOscuro();
+            Color bg = oscuro ? new Color(40, 42, 54, 245) : new Color(255, 255, 255, 245);
+            Color border = oscuro ? new Color(98, 114, 164) : new Color(203, 213, 225);
+            Color fg = oscuro ? new Color(248, 248, 242) : new Color(15, 23, 42);
+
+            Icon icono;
+            Color iconBg;
+            switch (tipo) {
+                case EXITO:
+                    icono = Icons.check(16);
+                    iconBg = oscuro ? new Color(30, 58, 47) : new Color(220, 252, 231);
+                    break;
+                case ADVERTENCIA:
+                    icono = Icons.triangleAlert(16);
+                    iconBg = oscuro ? new Color(61, 53, 34) : new Color(254, 243, 199);
+                    break;
+                case ERROR:
+                    icono = Icons.x(16);
+                    iconBg = oscuro ? new Color(61, 35, 42) : new Color(254, 226, 226);
+                    break;
+                default:
+                    icono = Icons.info(14);
+                    iconBg = oscuro ? new Color(46, 43, 68) : new Color(224, 231, 255);
+                    break;
+            }
+
+            JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 6)) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                    g2.setColor(new Color(0, 0, 0, 25));
+                    g2.fillRoundRect(2, 3, getWidth() - 4, getHeight() - 4, 16, 16);
+                    g2.setColor(bg);
+                    g2.fillRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 14, 14);
+                    g2.setColor(border);
+                    g2.setStroke(new BasicStroke(1.0f));
+                    g2.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 14, 14);
+                    g2.dispose();
+                }
+            };
+            panel.setOpaque(false);
+            panel.setBorder(new EmptyBorder(3, 8, 3, 8));
+
+            InsigniaCircular badge = new InsigniaCircular(icono, iconBg, 22);
+
+            String textoSeguro = mensaje == null ? "" : mensaje.trim();
+            JLabel lbl;
+            if (textoSeguro.contains("\n") || textoSeguro.length() > 40) {
+                String html = "<html><body style='font-family: Segoe UI, sans-serif; font-size: 9.5pt; font-weight: 500;'>"
+                        + textoSeguro.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br/>")
+                        + "</body></html>";
+                lbl = new JLabel(html);
+            } else {
+                lbl = new JLabel(textoSeguro);
+                lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            }
+            lbl.setForeground(fg);
+            lbl.setBorder(new EmptyBorder(0, 4, 0, 6));
+
+            JButton btnCerrar = new JButton(Icons.x(10));
+            btnCerrar.setPreferredSize(new Dimension(18, 18));
+            btnCerrar.setOpaque(false);
+            btnCerrar.setContentAreaFilled(false);
+            btnCerrar.setBorderPainted(false);
+            btnCerrar.setFocusPainted(false);
+            btnCerrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            btnCerrar.addActionListener(e -> cerrarToast());
+
+            panel.add(badge);
+            panel.add(lbl);
+            panel.add(btnCerrar);
+
+            add(panel);
+            pack();
+
+            Point ubicacion = calcularUbicacion(owner, getWidth(), getHeight());
+            setLocation(ubicacion);
+
+            temporizador = new Timer(3000, e -> cerrarToast());
+            temporizador.setRepeats(false);
+            temporizador.start();
+        }
+
+        private static Point calcularUbicacion(Window owner, int w, int h) {
+            if (owner != null && owner.isShowing()) {
+                Rectangle r = owner.getBounds();
+                return new Point(r.x + r.width - w - 24, r.y + 44);
+            }
+            GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+            Rectangle scr = ge.getMaximumWindowBounds();
+            return new Point(scr.x + scr.width - w - 24, scr.y + 44);
+        }
+
+        private void cerrarToast() {
+            if (temporizador != null && temporizador.isRunning()) {
+                temporizador.stop();
+            }
+            dispose();
+        }
+
+        public static void mostrar(Component padre, String mensaje, TipoDialogo tipo) {
+            Window win = padre == null ? null : (padre instanceof Window ? (Window) padre : SwingUtilities.getWindowAncestor(padre));
+            ToastDaisyUI toast = new ToastDaisyUI(win, mensaje, tipo);
+            toast.setVisible(true);
         }
     }
 }

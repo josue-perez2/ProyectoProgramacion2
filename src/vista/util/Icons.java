@@ -93,6 +93,24 @@ public class Icons {
     public static Icon clean(int size) { return broom(size); }
     public static Icon clean() { return broom(18); }
 
+    public static Icon helpCircle(int size) { return new LucideVectorIcon("help-circle", size); }
+    public static Icon helpCircle() { return helpCircle(18); }
+
+    public static Icon boxes(int size) { return new LucideVectorIcon("boxes", size); }
+    public static Icon boxes() { return boxes(18); }
+
+    public static Icon filter(int size) { return new LucideVectorIcon("filter", size); }
+    public static Icon filter() { return filter(18); }
+
+    public static Icon filterSlash(int size) { return new LucideVectorIcon("filter-slash", size); }
+    public static Icon filterSlash() { return filterSlash(18); }
+
+    public static Icon filterX(int size) { return filterSlash(size); }
+    public static Icon filterX() { return filterSlash(18); }
+
+    public static Icon download(int size) { return new LucideVectorIcon("download", size); }
+    public static Icon download() { return download(18); }
+
     public static class LucideVectorIcon implements Icon {
 
         private final String nombre;
@@ -488,6 +506,75 @@ public class Icons {
                     g2.draw(escoba);
                     g2.draw(new Line2D.Float(8f, 15f, 6.5f, 20f));
                     g2.draw(new Line2D.Float(10.5f, 14.5f, 9.5f, 21f));
+                    break;
+                }
+                case "help-circle": {
+                    g2.draw(new Ellipse2D.Float(3f, 3f, 18f, 18f));
+                    Path2D.Float q = new Path2D.Float();
+                    q.moveTo(9.5f, 9f);
+                    q.curveTo(9.5f, 7.6f, 10.6f, 6.5f, 12f, 6.5f);
+                    q.curveTo(13.4f, 6.5f, 14.5f, 7.6f, 14.5f, 9f);
+                    q.curveTo(14.5f, 10.5f, 13f, 11.5f, 12f, 12.5f);
+                    q.lineTo(12f, 14f);
+                    g2.draw(q);
+                    g2.fill(new Ellipse2D.Float(11.25f, 16.5f, 1.5f, 1.5f));
+                    break;
+                }
+                case "boxes": {
+                    Path2D.Float b1 = new Path2D.Float();
+                    b1.moveTo(2.5f, 7.5f);
+                    b1.lineTo(12f, 2.5f);
+                    b1.lineTo(21.5f, 7.5f);
+                    b1.lineTo(12f, 12.5f);
+                    b1.closePath();
+                    g2.draw(b1);
+                    g2.draw(new Line2D.Float(12f, 12.5f, 12f, 21.5f));
+                    g2.draw(new Line2D.Float(2.5f, 7.5f, 2.5f, 16.5f));
+                    g2.draw(new Line2D.Float(2.5f, 16.5f, 12f, 21.5f));
+                    g2.draw(new Line2D.Float(21.5f, 7.5f, 21.5f, 16.5f));
+                    g2.draw(new Line2D.Float(21.5f, 16.5f, 12f, 21.5f));
+                    break;
+                }
+                case "filter": {
+                    Path2D.Float f = new Path2D.Float();
+                    f.moveTo(3f, 4.5f);
+                    f.lineTo(21f, 4.5f);
+                    f.lineTo(14f, 12.5f);
+                    f.lineTo(14f, 19.5f);
+                    f.lineTo(10f, 21.5f);
+                    f.lineTo(10f, 12.5f);
+                    f.closePath();
+                    g2.draw(f);
+                    break;
+                }
+                case "filter-slash": {
+                    Path2D.Float f = new Path2D.Float();
+                    f.moveTo(3f, 4.5f);
+                    f.lineTo(21f, 4.5f);
+                    f.lineTo(14f, 12.5f);
+                    f.lineTo(14f, 19.5f);
+                    f.lineTo(10f, 21.5f);
+                    f.lineTo(10f, 12.5f);
+                    f.closePath();
+                    g2.draw(f);
+                    g2.draw(new Line2D.Float(2.5f, 21.5f, 21.5f, 2.5f));
+                    break;
+                }
+                case "download": {
+                    Path2D.Float tray = new Path2D.Float();
+                    tray.moveTo(4f, 15f);
+                    tray.lineTo(4f, 19.5f);
+                    tray.lineTo(20f, 19.5f);
+                    tray.lineTo(20f, 15f);
+                    g2.draw(tray);
+
+                    g2.draw(new Line2D.Float(12f, 3.5f, 12f, 14.5f));
+
+                    Path2D.Float arrow = new Path2D.Float();
+                    arrow.moveTo(7.5f, 10.5f);
+                    arrow.lineTo(12f, 15f);
+                    arrow.lineTo(16.5f, 10.5f);
+                    g2.draw(arrow);
                     break;
                 }
                 default: {

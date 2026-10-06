@@ -5,6 +5,7 @@ import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.intellijthemes.FlatDraculaIJTheme;
 
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import javax.swing.plaf.ColorUIResource;
 import java.awt.*;
 
@@ -54,6 +55,13 @@ public class TemaGestor {
         UIManager.put("Popup.dropShadowPainted", true);
         UIManager.put("TitlePane.unifiedBackground", true);
         UIManager.put("MenuItem.selectionArc", 8);
+        UIManager.put("OptionPane.messageFont", new Font("Segoe UI", Font.PLAIN, 13));
+        UIManager.put("OptionPane.buttonFont", new Font("Segoe UI", Font.BOLD, 12));
+        UIManager.put("OptionPane.showIcon", true);
+        UIManager.put("OptionPane.border", new EmptyBorder(16, 20, 16, 20));
+        UIManager.put("OptionPane.messageAreaBorder", new EmptyBorder(4, 4, 12, 4));
+        UIManager.put("OptionPane.buttonAreaBorder", new EmptyBorder(12, 4, 4, 4));
+        UIManager.put("OptionPane.buttonPadding", 12);
     }
 
     public static void aplicarTema(String nombreTema) {
