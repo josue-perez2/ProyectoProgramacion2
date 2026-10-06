@@ -21,16 +21,18 @@ public class ReportesDaoImpl implements ReportesDao {
     @Override
     public List<VentaPorPeriodoDTO> listarVentasPorPeriodo(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
         List<VentaPorPeriodoDTO> lista = new ArrayList<>();
-        String sql = "SELECT TRUNC(p.FECHA_PAG) AS FECHA, " +
-                "SUM(p.MONTO_RECIBIDO_PAG - NVL(p.CAMBIO_PAG, 0)) AS TOTAL_VENTA, " +
-                "SUM(CASE WHEN p.METODO_PAGO_PAG = 'E' THEN (p.MONTO_RECIBIDO_PAG - NVL(p.CAMBIO_PAG, 0)) ELSE 0 END) AS TOTAL_EFECTIVO, " +
-                "SUM(CASE WHEN p.METODO_PAGO_PAG = 'T' THEN (p.MONTO_RECIBIDO_PAG - NVL(p.CAMBIO_PAG, 0)) ELSE 0 END) AS TOTAL_TARJETA " +
+        String sql = "SELECT p.FECHA_PAG AS FECHA, " +
+                "e.ID_PED AS ID_PEDIDO, " +
+                "NVL(c.NOMBRE_CLI, 'Consumidor Final') AS NOMBRE_CLIENTE, " +
+                "p.METODO_PAGO_PAG AS METODO_PAGO, " +
+                "(p.MONTO_RECIBIDO_PAG - NVL(p.CAMBIO_PAG, 0)) AS TOTAL_PAGADO, " +
+                "NVL(e.PUNTOS_OBTENIDOS_PED, 0) AS PUNTOS " +
                 "FROM PAGOS p " +
                 "JOIN PEDIDOS e ON e.ID_PED = p.ID_PED_PAG " +
+                "LEFT JOIN CLIENTES c ON c.ID_CLI = e.ID_CLI_PED " +
                 "WHERE p.ESTADO_PAGO_PAG = 'C' " +
                 "AND p.FECHA_PAG >= ? AND p.FECHA_PAG < ? + INTERVAL '1' DAY " +
-                "GROUP BY TRUNC(p.FECHA_PAG) " +
-                "ORDER BY TRUNC(p.FECHA_PAG)";
+                "ORDER BY p.FECHA_PAG DESC, e.ID_PED DESC";
         try (Connection conn = conexion.conectar();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setTimestamp(1, Timestamp.valueOf(fechaInicio));
@@ -38,12 +40,24 @@ public class ReportesDaoImpl implements ReportesDao {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     VentaPorPeriodoDTO dto = new VentaPorPeriodoDTO();
-                    if (rs.getDate("FECHA") != null) {
-                        dto.setFecha(rs.getDate("FECHA").toLocalDate());
+                    Timestamp ts = rs.getTimestamp("FECHA");
+                    if (ts != null) {
+                        dto.setFecha(ts.toLocalDateTime().toLocalDate());
+                        dto.setFechaHora(ts.toLocalDateTime());
                     }
-                    dto.setTotalVenta(rs.getBigDecimal("TOTAL_VENTA"));
-                    dto.setTotalEfectivo(rs.getBigDecimal("TOTAL_EFECTIVO"));
-                    dto.setTotalTarjeta(rs.getBigDecimal("TOTAL_TARJETA"));
+                    dto.setIdPedido(rs.getInt("ID_PEDIDO"));
+                    dto.setNombreCliente(rs.getString("NOMBRE_CLIENTE"));
+                    dto.setMetodoPago(rs.getString("METODO_PAGO"));
+                    dto.setTotalPagado(rs.getBigDecimal("TOTAL_PAGADO"));
+                    dto.setPuntos(rs.getInt("PUNTOS"));
+                    dto.setTotalVenta(dto.getTotalPagado());
+                    if ("E".equalsIgnoreCase(dto.getMetodoPago())) {
+                        dto.setTotalEfectivo(dto.getTotalPagado());
+                        dto.setTotalTarjeta(BigDecimal.ZERO);
+                    } else {
+                        dto.setTotalEfectivo(BigDecimal.ZERO);
+                        dto.setTotalTarjeta(dto.getTotalPagado());
+                    }
                     lista.add(dto);
                 }
             }

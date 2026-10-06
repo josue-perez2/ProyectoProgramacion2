@@ -12,9 +12,11 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -28,6 +30,7 @@ public class VentasPorPeriodoDialog extends JDialog {
     private final JButton btnGenerar = new JButton("Generar Reporte");
     private final JButton btnExportar = FabricaDaisyUI.crearBotonExportarCsv(e -> exportarCsv());
     private final JButton btnCerrar = new JButton("Cerrar");
+    private final JLabel lblTotalesAlPie = new JLabel("Total Período: Q0.00   |   Efectivo: Q0.00   |   Tarjeta: Q0.00");
 
     private final JTable tabla = new JTable() {
         @Override
@@ -60,8 +63,8 @@ public class VentasPorPeriodoDialog extends JDialog {
 
     private void iniciarComponentes() {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(820, 560);
-        setMinimumSize(new Dimension(760, 500));
+        setSize(960, 600);
+        setMinimumSize(new Dimension(860, 520));
         setLocationRelativeTo(parent);
         setLayout(new BorderLayout(14, 14));
         getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
@@ -105,20 +108,34 @@ public class VentasPorPeriodoDialog extends JDialog {
         JPanel tarjetaFiltros = FabricaDaisyUI.crearTarjetaSeccion("Filtros", panelCabecera);
         panelContenedor.add(tarjetaFiltros, BorderLayout.NORTH);
 
-        String[] columnas = {"Fecha", "Total Venta (Q)", "Total Efectivo (Q)", "Total Tarjeta (Q)"};
+        String[] columnas = {"Fecha", "No. Pedido", "Cliente", "Método", "Total Pagado (Q)", "Puntos"};
         modeloTabla.setColumnIdentifiers(columnas);
         tabla.setModel(modeloTabla);
         tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         TableColumnModel colModel = tabla.getColumnModel();
-        colModel.getColumn(0).setPreferredWidth(120);
-        colModel.getColumn(1).setPreferredWidth(150);
-        colModel.getColumn(2).setPreferredWidth(150);
-        colModel.getColumn(3).setPreferredWidth(150);
+        colModel.getColumn(0).setPreferredWidth(140);
+        colModel.getColumn(1).setPreferredWidth(90);
+        colModel.getColumn(2).setPreferredWidth(230);
+        colModel.getColumn(3).setPreferredWidth(110);
+        colModel.getColumn(4).setPreferredWidth(130);
+        colModel.getColumn(5).setPreferredWidth(90);
 
         JScrollPane scrollTabla = new JScrollPane(tabla);
         scrollTabla.setBorder(BorderFactory.createEmptyBorder());
-        JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccion("Resultado", scrollTabla);
+
+        JPanel panelResultado = new JPanel(new BorderLayout(0, 8));
+        panelResultado.setOpaque(false);
+        panelResultado.add(scrollTabla, BorderLayout.CENTER);
+
+        JPanel panelPieTotales = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 6));
+        panelPieTotales.setOpaque(false);
+        lblTotalesAlPie.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblTotalesAlPie.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #0f172a; [dark]foreground: #f8f8f2");
+        panelPieTotales.add(lblTotalesAlPie);
+        panelResultado.add(panelPieTotales, BorderLayout.SOUTH);
+
+        JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccion("Resultado", panelResultado);
         panelContenedor.add(tarjetaTabla, BorderLayout.CENTER);
 
         add(panelContenedor, BorderLayout.CENTER);
@@ -140,14 +157,34 @@ public class VentasPorPeriodoDialog extends JDialog {
         try {
             List<VentaPorPeriodoDTO> lista = reporteService.listarVentasPorPeriodo(ini, fin);
             modeloTabla.setRowCount(0);
+            BigDecimal totalVentas = BigDecimal.ZERO;
+            BigDecimal totalEfectivo = BigDecimal.ZERO;
+            BigDecimal totalTarjeta = BigDecimal.ZERO;
+
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
             for (VentaPorPeriodoDTO v : lista) {
+                String fechaTexto = v.getFechaHora() != null ? v.getFechaHora().format(dtf) : (v.getFecha() != null ? v.getFecha().toString() : "");
+                String metodoTexto = "E".equalsIgnoreCase(v.getMetodoPago()) ? "Efectivo" : ("T".equalsIgnoreCase(v.getMetodoPago()) ? "Tarjeta" : v.getMetodoPago());
+                BigDecimal pag = v.getTotalPagado() != null ? v.getTotalPagado() : BigDecimal.ZERO;
+                totalVentas = totalVentas.add(pag);
+                if ("E".equalsIgnoreCase(v.getMetodoPago())) {
+                    totalEfectivo = totalEfectivo.add(pag);
+                } else if ("T".equalsIgnoreCase(v.getMetodoPago())) {
+                    totalTarjeta = totalTarjeta.add(pag);
+                }
+
                 modeloTabla.addRow(new Object[]{
-                        v.getFecha() != null ? v.getFecha().toString() : "",
-                        v.getTotalVenta() != null ? v.getTotalVenta() : BigDecimal.ZERO,
-                        v.getTotalEfectivo() != null ? v.getTotalEfectivo() : BigDecimal.ZERO,
-                        v.getTotalTarjeta() != null ? v.getTotalTarjeta() : BigDecimal.ZERO
+                        fechaTexto,
+                        "#" + v.getIdPedido(),
+                        v.getNombreCliente() != null ? v.getNombreCliente() : "Consumidor Final",
+                        metodoTexto,
+                        pag.setScale(2, RoundingMode.HALF_UP),
+                        v.getPuntos() + " pts"
                 });
             }
+            lblTotalesAlPie.setText("Total Período: Q" + totalVentas.setScale(2, RoundingMode.HALF_UP)
+                    + "   |   Efectivo: Q" + totalEfectivo.setScale(2, RoundingMode.HALF_UP)
+                    + "   |   Tarjeta: Q" + totalTarjeta.setScale(2, RoundingMode.HALF_UP));
             FabricaDaisyUI.mostrarToastExito(this, "Reporte generado: " + lista.size() + " registros.");
         } catch (RuntimeException ex) {
             FabricaDaisyUI.mostrarError(this, "Error", "Error al generar reporte: " + ex.getMessage());
