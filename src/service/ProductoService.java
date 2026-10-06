@@ -4,6 +4,7 @@ import dao.ProductosDao;
 import dao.Impl.ProductosDaoImpl;
 import model.Productos;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public class ProductoService {
@@ -22,9 +23,19 @@ public class ProductoService {
         return productosDao.listarActivosPorCategoria(idCatPro);
     }
 
+    public Productos buscarPorId(int id) {
+        return productosDao.buscarPorId(id);
+    }
+
     public void insertar(Productos producto) {
         if (producto == null) {
             throw new IllegalArgumentException("El producto no puede ser nulo.");
+        }
+        if (producto.getPrecioPro() == null || producto.getPrecioPro().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El precio del producto no puede ser negativo.");
+        }
+        if (producto.getExistenciaPro() == null || producto.getExistenciaPro().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("La existencia del producto no puede ser negativa.");
         }
         String codigo = producto.getCodigoPro() != null ? producto.getCodigoPro().trim() : "";
         for (Productos p : listar()) {
@@ -38,6 +49,12 @@ public class ProductoService {
     public void actualizar(Productos producto) {
         if (producto == null) {
             throw new IllegalArgumentException("El producto no puede ser nulo.");
+        }
+        if (producto.getPrecioPro() == null || producto.getPrecioPro().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El precio del producto no puede ser negativo.");
+        }
+        if (producto.getExistenciaPro() == null || producto.getExistenciaPro().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("La existencia del producto no puede ser negativa.");
         }
         boolean existe = false;
         String codigo = producto.getCodigoPro() != null ? producto.getCodigoPro().trim() : "";

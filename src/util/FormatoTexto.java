@@ -15,6 +15,50 @@ public class FormatoTexto {
         return filtroDigitos(8, "+502 ", FormatoTexto::formatearTelefono);
     }
 
+    public static DocumentFilter filtroTarjeta() {
+        return filtroDigitos(16, "", FormatoTexto::formatearTarjeta);
+    }
+
+    public static DocumentFilter filtroVencimiento() {
+        return filtroDigitos(4, "", FormatoTexto::formatearVencimiento);
+    }
+
+    public static DocumentFilter filtroEnteros() {
+        return filtroEnteros(10);
+    }
+
+    public static DocumentFilter filtroEnteros(int maxDigitos) {
+        return new DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) throws BadLocationException {
+                if (string == null) return;
+                String actual = fb.getDocument().getText(0, fb.getDocument().getLength());
+                String nuevo = actual.substring(0, offset) + string + actual.substring(offset);
+                if (esEnteroValido(nuevo, maxDigitos)) {
+                    super.insertString(fb, offset, string, attr);
+                }
+            }
+
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String text, AttributeSet attrs) throws BadLocationException {
+                String actual = fb.getDocument().getText(0, fb.getDocument().getLength());
+                String nuevo = actual.substring(0, offset) + (text != null ? text : "") + actual.substring(offset + length);
+                if (nuevo.isEmpty() || esEnteroValido(nuevo, maxDigitos)) {
+                    super.replace(fb, offset, length, text, attrs);
+                }
+            }
+
+            private boolean esEnteroValido(String s, int max) {
+                if (s.isEmpty()) return true;
+                if (s.length() > max) return false;
+                for (char c : s.toCharArray()) {
+                    if (!Character.isDigit(c)) return false;
+                }
+                return true;
+            }
+        };
+    }
+
     public static DocumentFilter filtroDigitos(int maxDigitos, String prefijo, Function<String, String> formateador) {
         return new DocumentFilter() {
 
@@ -73,6 +117,28 @@ public class FormatoTexto {
         for (int i = 0; i < digitos.length(); i++) {
             if (i == 4) {
                 sb.append('-');
+            }
+            sb.append(digitos.charAt(i));
+        }
+        return sb.toString();
+    }
+
+    public static String formatearTarjeta(String digitos) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < digitos.length(); i++) {
+            if (i > 0 && i % 4 == 0) {
+                sb.append(' ');
+            }
+            sb.append(digitos.charAt(i));
+        }
+        return sb.toString();
+    }
+
+    public static String formatearVencimiento(String digitos) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < digitos.length(); i++) {
+            if (i == 2) {
+                sb.append('/');
             }
             sb.append(digitos.charAt(i));
         }

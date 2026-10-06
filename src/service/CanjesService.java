@@ -83,6 +83,15 @@ public class CanjesService {
         canjesDao.eliminar(id);
     }
 
+    public Canjes buscarPorId(int id) {
+        for (Canjes c : canjesDao.listar()) {
+            if (c.getIdCan() == id) {
+                return c;
+            }
+        }
+        return null;
+    }
+
     public Map<Integer, Productos> obtenerMapaProductos() {
         Map<Integer, Productos> mapa = new HashMap<>();
         try {

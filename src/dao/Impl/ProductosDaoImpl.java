@@ -55,6 +55,23 @@ public class ProductosDaoImpl implements ProductosDao {
     }
 
     @Override
+    public Productos buscarPorId(int id) {
+        String sql = "SELECT ID_PRO, CODIGO_PRO, ID_CAT_PRO, NOMBRE_PRO, PRECIO_PRO, EXISTENCIA_PRO, ACTIVO_PRO FROM PRODUCTOS WHERE ID_PRO = ?";
+        try (Connection conn = conexion.conectar();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapear(rs);
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+
+    @Override
     public void insertar(Productos producto) {
         String sql = "INSERT INTO PRODUCTOS (CODIGO_PRO, ID_CAT_PRO, NOMBRE_PRO, PRECIO_PRO, EXISTENCIA_PRO, ACTIVO_PRO) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
