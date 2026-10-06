@@ -78,6 +78,7 @@ public class CategoriaView extends JFrame {
         String[] columnas = {"ID", "Nombre de la Categoría"};
         modeloTabla.setColumnIdentifiers(columnas);
         tabla.setModel(modeloTabla);
+        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
 
         TableColumnModel colModel = tabla.getColumnModel();
@@ -175,12 +176,12 @@ public class CategoriaView extends JFrame {
     private void guardarCategoria() {
         String nombre = txtNombre.getText().trim();
         if (nombre.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre de la categoría es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El nombre de la categoría es obligatorio.");
             return;
         }
         for (Categorias c : categoriaService.listar()) {
             if (c.getNombreCat().equalsIgnoreCase(nombre)) {
-                JOptionPane.showMessageDialog(this, "Ya existe una categoría con el nombre '" + nombre + "'.", "Categoría Duplicada", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Categoría Duplicada", "Ya existe una categoría con el nombre '" + nombre + "'.");
                 return;
             }
         }
@@ -189,27 +190,27 @@ public class CategoriaView extends JFrame {
             categoria.setNombreCat(nombre);
 
             categoriaService.insertar(categoria);
-            JOptionPane.showMessageDialog(this, "Categoría guardada correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Categoría guardada correctamente.");
             cargarTabla();
             limpiarFormulario();
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al guardar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al guardar: " + ex.getMessage());
         }
     }
 
     private void actualizarCategoria() {
         if (idCategoriaSeleccionada == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione una categoría de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione una categoría de la tabla.");
             return;
         }
         String nombre = txtNombre.getText().trim();
         if (nombre.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre de la categoría es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El nombre de la categoría es obligatorio.");
             return;
         }
         for (Categorias c : categoriaService.listar()) {
             if (c.getNombreCat().equalsIgnoreCase(nombre) && c.getIdCat() != idCategoriaSeleccionada) {
-                JOptionPane.showMessageDialog(this, "Ya existe otra categoría con el nombre '" + nombre + "'.", "Categoría Duplicada", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Categoría Duplicada", "Ya existe otra categoría con el nombre '" + nombre + "'.");
                 return;
             }
         }
@@ -219,28 +220,28 @@ public class CategoriaView extends JFrame {
             categoria.setNombreCat(nombre);
 
             categoriaService.actualizar(categoria);
-            JOptionPane.showMessageDialog(this, "Categoría actualizada correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Categoría actualizada correctamente.");
             cargarTabla();
             limpiarFormulario();
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al actualizar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al actualizar: " + ex.getMessage());
         }
     }
 
     private void eliminarCategoria() {
         if (idCategoriaSeleccionada == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione una categoría de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione una categoría de la tabla.");
             return;
         }
-        int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar la categoría seleccionada?", "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (confirmar == JOptionPane.YES_OPTION) {
+        boolean confirmar = FabricaDaisyUI.mostrarConfirmacion(this, "Confirmar Eliminación", "¿Desea eliminar la categoría seleccionada?");
+        if (confirmar) {
             try {
                 categoriaService.eliminar(idCategoriaSeleccionada);
-                JOptionPane.showMessageDialog(this, "Categoría eliminada correctamente.");
+                FabricaDaisyUI.mostrarToastExito(this, "Categoría eliminada correctamente.");
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, "No se puede eliminar la categoría porque contiene productos registrados. Reasigne o elimine primero los productos asociados.", "Operación Bloqueada", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Operación Bloqueada", "No se puede eliminar la categoría porque contiene productos registrados. Reasigne o elimine primero los productos asociados.");
             }
         }
     }

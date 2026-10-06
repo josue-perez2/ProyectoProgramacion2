@@ -15,6 +15,7 @@ public class AdministracionView extends JFrame {
     private final JButton btnIrSandwich = new JButton("Gestionar Sándwiches", Icons.utensils(16));
     private final JButton btnIrMenu = new JButton("Gestionar Combos", Icons.menu(16));
     private final JButton btnIrReportes = new JButton("Reportes", Icons.receipt(16));
+    private final JButton btnIrInventario = new JButton("Control de Inventario", Icons.refreshCw(16));
     private final JButton btnRegresar = new JButton("Volver al Inicio", Icons.arrowLeft(16));
 
     private final Window parent;
@@ -50,6 +51,7 @@ public class AdministracionView extends JFrame {
         FabricaDaisyUI.aplicarBotonAcento(btnIrSandwich);
         FabricaDaisyUI.aplicarBotonPrimario(btnIrMenu);
         FabricaDaisyUI.aplicarBotonAcento(btnIrReportes);
+        FabricaDaisyUI.aplicarBotonSecundario(btnIrInventario);
         FabricaDaisyUI.aplicarBotonNeutral(btnRegresar);
 
         btnIrCategoria.setPreferredSize(new Dimension(195, 38));
@@ -57,6 +59,7 @@ public class AdministracionView extends JFrame {
         btnIrSandwich.setPreferredSize(new Dimension(195, 38));
         btnIrMenu.setPreferredSize(new Dimension(195, 38));
         btnIrReportes.setPreferredSize(new Dimension(195, 38));
+        btnIrInventario.setPreferredSize(new Dimension(195, 38));
         btnRegresar.setPreferredSize(new Dimension(175, 38));
 
         btnIrCategoria.setIconTextGap(8);
@@ -64,6 +67,7 @@ public class AdministracionView extends JFrame {
         btnIrSandwich.setIconTextGap(8);
         btnIrMenu.setIconTextGap(8);
         btnIrReportes.setIconTextGap(8);
+        btnIrInventario.setIconTextGap(8);
         btnRegresar.setIconTextGap(8);
 
         btnIrCategoria.addActionListener(e -> abrirCategoria());
@@ -71,6 +75,7 @@ public class AdministracionView extends JFrame {
         btnIrSandwich.addActionListener(e -> abrirSandwich());
         btnIrMenu.addActionListener(e -> abrirMenu());
         btnIrReportes.addActionListener(e -> abrirReportes());
+        btnIrInventario.addActionListener(e -> abrirInventario());
         btnRegresar.addActionListener(e -> regresar());
 
         panelTarjetas.add(crearTarjetaModulo("Categorías", btnIrCategoria));
@@ -78,7 +83,7 @@ public class AdministracionView extends JFrame {
         panelTarjetas.add(crearTarjetaModulo("Sándwiches", btnIrSandwich));
         panelTarjetas.add(crearTarjetaModulo("Combos", btnIrMenu));
         panelTarjetas.add(crearTarjetaModulo("Reportes", btnIrReportes));
-        panelTarjetas.add(new JPanel());
+        panelTarjetas.add(crearTarjetaModulo("Inventario", btnIrInventario));
 
         panelPrincipal.add(panelTarjetas, BorderLayout.CENTER);
 
@@ -129,6 +134,11 @@ public class AdministracionView extends JFrame {
 
     private void abrirReportes() {
         ReportesView ventana = new ReportesView(this);
+        ventana.setVisible(true);
+    }
+
+    private void abrirInventario() {
+        InventarioView ventana = new InventarioView(this);
         ventana.setVisible(true);
     }
 

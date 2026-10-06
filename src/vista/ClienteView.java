@@ -165,6 +165,7 @@ public class ClienteView extends JFrame {
         clasificador = new TableRowSorter<>(modeloTabla);
         tabla.setModel(modeloTabla);
         tabla.setRowSorter(clasificador);
+        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         tabla.getColumnModel().getColumn(7).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
 
@@ -325,9 +326,9 @@ public class ClienteView extends JFrame {
         String dpi = txtDpi.getText().trim();
         for (Cliente c : clienteService.listar()) {
             if (c.getDpiCli() != null && c.getDpiCli().equalsIgnoreCase(dpi)) {
-                JOptionPane.showMessageDialog(this,
-                        "Ya existe un cliente registrado con el DPI '" + dpi + "'. Use el botón 'Modificar' para actualizar el registro existente.",
-                        "DPI Duplicado", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this,
+                        "DPI Duplicado",
+                        "Ya existe un cliente registrado con el DPI '" + dpi + "'. Use el botón 'Modificar' para actualizar el registro existente.");
                 return;
             }
         }
@@ -342,19 +343,20 @@ public class ClienteView extends JFrame {
             cliente.setEstadoCli("Activo".equals(cmbEstado.getSelectedItem()) ? "A" : "I");
 
             clienteService.insertar(cliente);
-            JOptionPane.showMessageDialog(this, "Cliente guardado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Cliente registrado exitosamente.");
+            FabricaDaisyUI.mostrarExito(this, "Registro Exitoso", "Cliente guardado correctamente.");
             cargarTabla();
             limpiarFormulario();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El saldo debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El saldo debe ser un número válido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al guardar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error al Guardar", ex.getMessage());
         }
     }
 
     private void actualizarCliente() {
         if (idClienteSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un cliente de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un cliente de la tabla.");
             return;
         }
         if (!validarFormulario()) {
@@ -363,9 +365,9 @@ public class ClienteView extends JFrame {
         String dpi = txtDpi.getText().trim();
         for (Cliente c : clienteService.listar()) {
             if (c.getDpiCli() != null && c.getDpiCli().equalsIgnoreCase(dpi) && c.getIdCli() != idClienteSeleccionado) {
-                JOptionPane.showMessageDialog(this,
-                        "Ya existe otro cliente registrado con el DPI '" + dpi + "'. Ingrese un DPI único.",
-                        "DPI Duplicado", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this,
+                        "DPI Duplicado",
+                        "Ya existe otro cliente registrado con el DPI '" + dpi + "'. Ingrese un DPI único.");
                 return;
             }
         }
@@ -381,36 +383,38 @@ public class ClienteView extends JFrame {
             cliente.setEstadoCli("Activo".equals(cmbEstado.getSelectedItem()) ? "A" : "I");
 
             clienteService.actualizar(cliente);
-            JOptionPane.showMessageDialog(this, "Cliente actualizado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Cliente actualizado.");
+            FabricaDaisyUI.mostrarExito(this, "Actualización Exitosa", "Cliente actualizado correctamente.");
             cargarTabla();
             limpiarFormulario();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El saldo debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El saldo debe ser un número válido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al actualizar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error al Actualizar", ex.getMessage());
         }
     }
 
     private void eliminarCliente() {
         if (idClienteSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un cliente de la tabla para eliminar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un cliente de la tabla para eliminar.");
             return;
         }
-        int confirmar = JOptionPane.showConfirmDialog(this, "¿Está seguro de eliminar o inactivar este cliente?", "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
-        if (confirmar == JOptionPane.YES_OPTION) {
+        boolean confirmar = FabricaDaisyUI.mostrarConfirmacion(this, "Confirmar Eliminación", "¿Está seguro de eliminar o inactivar este cliente?");
+        if (confirmar) {
             try {
                 clienteService.eliminar(idClienteSeleccionado);
-                JOptionPane.showMessageDialog(this, "Cliente eliminado correctamente.");
+                FabricaDaisyUI.mostrarToastExito(this, "Cliente eliminado.");
+                FabricaDaisyUI.mostrarExito(this, "Cliente Eliminado", "Cliente eliminado correctamente.");
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
                 try {
                     clienteService.integridad(idClienteSeleccionado);
-                    JOptionPane.showMessageDialog(this, "El cliente tiene pedidos o movimientos registrados, por lo que fue marcado como INACTIVO para preservar el historial.", "Información", JOptionPane.INFORMATION_MESSAGE);
+                    FabricaDaisyUI.mostrarInformacion(this, "Cliente Inactivado", "El cliente tiene pedidos o movimientos registrados, por lo que fue marcado como INACTIVO para preservar el historial.");
                     cargarTabla();
                     limpiarFormulario();
                 } catch (RuntimeException exInactivar) {
-                    JOptionPane.showMessageDialog(this, "No se pudo procesar la solicitud: " + exInactivar.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    FabricaDaisyUI.mostrarError(this, "Error de Integridad", "No se pudo procesar la solicitud: " + exInactivar.getMessage());
                 }
             }
         }
@@ -419,21 +423,21 @@ public class ClienteView extends JFrame {
     private boolean validarFormulario() {
         String dpi = txtDpi.getText().trim();
         if (FormatoTexto.soloDigitos(dpi).length() != 13) {
-            JOptionPane.showMessageDialog(this, "El DPI debe tener 13 dígitos (ej. 1234 56789 0101).", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El DPI debe tener 13 dígitos (ej. 1234 56789 0101).");
             return false;
         }
         if (txtNombre.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre del cliente es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El nombre del cliente es obligatorio.");
             return false;
         }
         String telefono = txtTelefono.getText().trim();
         if (FormatoTexto.soloDigitosTelefono(telefono).length() != 8) {
-            JOptionPane.showMessageDialog(this, "El teléfono debe tener 8 dígitos (ej. +502 9999-9999).", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El teléfono debe tener 8 dígitos (ej. +502 9999-9999).");
             return false;
         }
         String correo = txtCorreo.getText().trim();
         if (!PATRON_CORREO.matcher(correo).matches()) {
-            JOptionPane.showMessageDialog(this, "El correo no es válido (ej. cliente@correo.com).", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El correo no es válido (ej. cliente@correo.com).");
             return false;
         }
         return true;

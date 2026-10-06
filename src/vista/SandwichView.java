@@ -166,6 +166,7 @@ public class SandwichView extends JFrame {
 
         modeloTabla.setColumnIdentifiers(new String[]{"ID", "Código", "Nombre", "Precio", "Activo"});
         tabla.setModel(modeloTabla);
+        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         tabla.getColumnModel().getColumn(4).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
 
@@ -182,8 +183,8 @@ public class SandwichView extends JFrame {
                 seleccionarFila();
             }
         });
+
         JScrollPane scrollTabla = new JScrollPane(tabla);
-        scrollTabla.setPreferredSize(new Dimension(520, 320));
         scrollTabla.setBorder(BorderFactory.createEmptyBorder());
 
         JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
@@ -199,6 +200,7 @@ public class SandwichView extends JFrame {
 
         modeloDetalle.setColumnIdentifiers(new String[]{"ID", "Ingrediente", "Cantidad", "Tipo"});
         tablaDetalle.setModel(modeloDetalle);
+        tablaDetalle.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaDetalle);
 
         TableColumnModel colDetModel = tablaDetalle.getColumnModel();
@@ -215,7 +217,6 @@ public class SandwichView extends JFrame {
         });
 
         JScrollPane scrollDetalle = new JScrollPane(tablaDetalle);
-        scrollDetalle.setPreferredSize(new Dimension(520, 320));
         scrollDetalle.setBorder(BorderFactory.createEmptyBorder());
 
         JPanel tarjetaDetalleTabla = FabricaDaisyUI.crearTarjetaSeccion(
@@ -287,8 +288,7 @@ public class SandwichView extends JFrame {
                 idsProductoPan.add(p.getIdPro());
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudieron cargar los productos: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudieron cargar los productos: " + ex.getMessage());
         }
     }
 
@@ -305,8 +305,7 @@ public class SandwichView extends JFrame {
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar la lista de sándwiches: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudo cargar la lista de sándwiches: " + ex.getMessage());
         }
     }
 
@@ -322,8 +321,7 @@ public class SandwichView extends JFrame {
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar el detalle: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudo cargar el detalle: " + ex.getMessage());
         }
     }
 
@@ -371,9 +369,9 @@ public class SandwichView extends JFrame {
         }
         String codigo = txtCodigo.getText().trim();
         if (sandwichService.buscarPorCodigo(codigo) != null) {
-            JOptionPane.showMessageDialog(this,
-                    "Ya existe un sándwich con el código '" + codigo + "'. Use el botón 'Modificar' para actualizar el registro existente.",
-                    "Código Duplicado", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this,
+                    "Código Duplicado",
+                    "Ya existe un sándwich con el código '" + codigo + "'. Use el botón 'Modificar' para actualizar el registro existente.");
             return;
         }
         try {
@@ -386,7 +384,7 @@ public class SandwichView extends JFrame {
             sandwichService.insertar(sandwich);
             Sandwich guardado = sandwichService.buscarPorCodigo(codigo);
 
-            JOptionPane.showMessageDialog(this, "Sándwich guardado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Sándwich guardado correctamente.");
             cargarTabla();
             limpiarFormulario();
 
@@ -394,15 +392,15 @@ public class SandwichView extends JFrame {
                 seleccionarEnTabla(guardado.getIdSan());
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El precio debe ser un número válido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al guardar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al guardar: " + ex.getMessage());
         }
     }
 
     private void actualizarSandwich() {
         if (idSandwichSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un sándwich de la tabla para modificar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un sándwich de la tabla para modificar.");
             return;
         }
         if (!validarFormulario()) {
@@ -411,9 +409,9 @@ public class SandwichView extends JFrame {
         String codigo = txtCodigo.getText().trim();
         Sandwich existente = sandwichService.buscarPorCodigo(codigo);
         if (existente != null && existente.getIdSan() != idSandwichSeleccionado) {
-            JOptionPane.showMessageDialog(this,
-                    "Ya existe otro sándwich con el código '" + codigo + "'. Ingrese un código diferente.",
-                    "Código Duplicado", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this,
+                    "Código Duplicado",
+                    "Ya existe otro sándwich con el código '" + codigo + "'. Ingrese un código diferente.");
             return;
         }
         try {
@@ -425,50 +423,50 @@ public class SandwichView extends JFrame {
             sandwich.setActivoSan("Activo".equals(cmbActivo.getSelectedItem()) ? "A" : "I");
 
             sandwichService.actualizar(sandwich);
-            JOptionPane.showMessageDialog(this, "Sándwich actualizado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Sándwich actualizado correctamente.");
             cargarTabla();
             limpiarFormulario();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El precio debe ser un número válido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al actualizar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al actualizar: " + ex.getMessage());
         }
     }
 
     private void eliminarSandwich() {
         if (idSandwichSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un sándwich de la tabla para eliminar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un sándwich de la tabla para eliminar.");
             return;
         }
-        int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar el sándwich seleccionado? Se eliminarán sus ingredientes asociados.",
-                "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (confirmar == JOptionPane.YES_OPTION) {
+        boolean confirmar = FabricaDaisyUI.mostrarConfirmacion(this, "Confirmar Eliminación", "¿Desea eliminar el sándwich seleccionado? Se eliminarán sus ingredientes asociados.");
+        if (confirmar) {
             try {
                 for (DetalleSandwich d : detalleSandwichService.listarPorSandwich(idSandwichSeleccionado)) {
                     detalleSandwichService.eliminar(d.getIdDetSan());
                 }
                 sandwichService.eliminar(idSandwichSeleccionado);
+                FabricaDaisyUI.mostrarToastExito(this, "Sándwich eliminado correctamente.");
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                FabricaDaisyUI.mostrarError(this, "Error", "Error al eliminar: " + ex.getMessage());
             }
         }
     }
 
     private void agregarDetalle() {
         if (idSandwichSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Primero debe seleccionar un sándwich para poder agregarle ingredientes.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Primero debe seleccionar un sándwich para poder agregarle ingredientes.");
             return;
         }
         if (cmbProducto.getSelectedIndex() == -1) {
-            JOptionPane.showMessageDialog(this, "Debe seleccionar un producto.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Debe seleccionar un producto.");
             return;
         }
         try {
             BigDecimal cantidad = leerDecimal(txtCantidad.getText());
             if (cantidad.compareTo(BigDecimal.ZERO) <= 0) {
-                JOptionPane.showMessageDialog(this, "La cantidad debe ser mayor que cero.", "Validación", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "La cantidad debe ser mayor que cero.");
                 return;
             }
 
@@ -480,17 +478,18 @@ public class SandwichView extends JFrame {
 
             detalleSandwichService.insertar(detalle);
             cargarDetalle(idSandwichSeleccionado);
+            FabricaDaisyUI.mostrarToastExito(this, "Ingrediente agregado.");
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "La cantidad debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "La cantidad debe ser un número válido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al agregar el detalle: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al agregar el detalle: " + ex.getMessage());
         }
     }
 
     private void quitarDetalle() {
         int fila = tablaDetalle.getSelectedRow();
         if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione un ingrediente para quitar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un ingrediente para quitar.");
             return;
         }
         try {
@@ -499,8 +498,9 @@ public class SandwichView extends JFrame {
             if (idSandwichSeleccionado != null) {
                 cargarDetalle(idSandwichSeleccionado);
             }
+            FabricaDaisyUI.mostrarToastExito(this, "Ingrediente quitado.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al quitar el ingrediente: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al quitar el ingrediente: " + ex.getMessage());
         }
     }
 
@@ -516,20 +516,20 @@ public class SandwichView extends JFrame {
 
     private boolean validarFormulario() {
         if (txtCodigo.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El código del sándwich es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El código del sándwich es obligatorio.");
             return false;
         }
         if (txtNombre.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre del sándwich es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El nombre del sándwich es obligatorio.");
             return false;
         }
         try {
             if (leerDecimal(txtPrecio.getText()).compareTo(BigDecimal.ZERO) < 0) {
-                JOptionPane.showMessageDialog(this, "El precio no puede ser negativo.", "Validación", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El precio no puede ser negativo.");
                 return false;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El precio debe ser un número válido.");
             return false;
         }
         return true;

@@ -177,6 +177,7 @@ public class MenuView extends JFrame {
 
         modeloTabla.setColumnIdentifiers(new String[]{"ID", "Código", "Nombre", "Precio", "Activo"});
         tabla.setModel(modeloTabla);
+        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         tabla.getColumnModel().getColumn(4).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
 
@@ -194,7 +195,6 @@ public class MenuView extends JFrame {
             }
         });
         JScrollPane scrollTabla = new JScrollPane(tabla);
-        scrollTabla.setPreferredSize(new Dimension(520, 320));
         scrollTabla.setBorder(BorderFactory.createEmptyBorder());
 
         JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
@@ -210,6 +210,7 @@ public class MenuView extends JFrame {
 
         modeloDetalle.setColumnIdentifiers(new String[]{"ID", "Tipo", "Item", "Cantidad"});
         tablaDetalle.setModel(modeloDetalle);
+        tablaDetalle.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaDetalle);
 
         TableColumnModel colDetModel = tablaDetalle.getColumnModel();
@@ -226,7 +227,6 @@ public class MenuView extends JFrame {
         });
 
         JScrollPane scrollDetalle = new JScrollPane(tablaDetalle);
-        scrollDetalle.setPreferredSize(new Dimension(520, 320));
         scrollDetalle.setBorder(BorderFactory.createEmptyBorder());
 
         JPanel tarjetaDetalleTabla = FabricaDaisyUI.crearTarjetaSeccion(
@@ -293,8 +293,7 @@ public class MenuView extends JFrame {
                 idsSandwich.add(s.getIdSan());
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudieron cargar los sándwich: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudieron cargar los sándwich: " + ex.getMessage());
         }
 
         cargarComboProducto(cmbBebida, idsBebida, CategoriasItem.BEBIDA, "bebidas");
@@ -310,8 +309,7 @@ public class MenuView extends JFrame {
                 ids.add(p.getIdPro());
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudieron cargar los productos de categoría " + nombre + ": " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudieron cargar los productos de categoría " + nombre + ": " + ex.getMessage());
         }
     }
 
@@ -328,8 +326,7 @@ public class MenuView extends JFrame {
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar la lista de combos: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudo cargar la lista de combos: " + ex.getMessage());
         }
     }
 
@@ -345,8 +342,7 @@ public class MenuView extends JFrame {
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar el detalle: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudo cargar el detalle: " + ex.getMessage());
         }
     }
 
@@ -408,9 +404,9 @@ public class MenuView extends JFrame {
         }
         String codigo = txtCodigo.getText().trim();
         if (menuService.buscarPorCodigo(codigo) != null) {
-            JOptionPane.showMessageDialog(this,
-                    "Ya existe un menú con el código '" + codigo + "'. Use el botón 'Modificar' para actualizar el combo existente.",
-                    "Código Duplicado", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this,
+                    "Código Duplicado",
+                    "Ya existe un menú con el código '" + codigo + "'. Use el botón 'Modificar' para actualizar el combo existente.");
             return;
         }
         try {
@@ -427,7 +423,7 @@ public class MenuView extends JFrame {
                 guardarComposicion(guardado.getIdMen());
             }
 
-            JOptionPane.showMessageDialog(this, "Combo guardado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Combo guardado correctamente.");
             cargarTabla();
             limpiarFormulario();
 
@@ -435,27 +431,27 @@ public class MenuView extends JFrame {
                 seleccionarEnTabla(guardado.getIdMen());
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El precio debe ser un número válido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al guardar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al guardar: " + ex.getMessage());
         }
     }
 
     private boolean validarComposicionInputs() {
         if (cmbSandwich.getSelectedIndex() == -1 || cmbBebida.getSelectedIndex() == -1 || cmbRicito.getSelectedIndex() == -1) {
-            JOptionPane.showMessageDialog(this,
-                    "El combo requiere seleccionar un sándwich, una bebida y un ricito.",
-                    "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this,
+                    "Validación",
+                    "El combo requiere seleccionar un sándwich, una bebida y un ricito.");
             return false;
         }
         try {
             BigDecimal cantidad = leerDecimal(txtCantidad.getText());
             if (cantidad.compareTo(BigDecimal.ZERO) <= 0) {
-                JOptionPane.showMessageDialog(this, "La cantidad de porciones debe ser mayor que cero.", "Validación", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "La cantidad de porciones debe ser mayor que cero.");
                 return false;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "La cantidad debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "La cantidad debe ser un número válido.");
             return false;
         }
         return true;
@@ -484,7 +480,7 @@ public class MenuView extends JFrame {
             insertarDetalle(idMen, TIPO_PRODUCTO, idsRicito.get(indexes[2]), cantidad);
             return true;
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al guardar la composición del menú: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al guardar la composición del menú: " + ex.getMessage());
             return false;
         }
     }
@@ -500,7 +496,7 @@ public class MenuView extends JFrame {
 
     private void actualizarMenu() {
         if (idMenuSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un menú de la tabla para modificar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un menú de la tabla para modificar.");
             return;
         }
         if (!validarFormulario()) {
@@ -509,9 +505,9 @@ public class MenuView extends JFrame {
         String codigo = txtCodigo.getText().trim();
         Menus existente = menuService.buscarPorCodigo(codigo);
         if (existente != null && existente.getIdMen() != idMenuSeleccionado) {
-            JOptionPane.showMessageDialog(this,
-                    "Ya existe otro menú con el código '" + codigo + "'. Ingrese un código diferente.",
-                    "Código Duplicado", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this,
+                    "Código Duplicado",
+                    "Ya existe otro menú con el código '" + codigo + "'. Ingrese un código diferente.");
             return;
         }
         try {
@@ -523,40 +519,40 @@ public class MenuView extends JFrame {
             menu.setActivoMen("Activo".equals(cmbActivo.getSelectedItem()) ? "A" : "I");
 
             menuService.actualizar(menu);
-            JOptionPane.showMessageDialog(this, "Combo actualizado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Combo actualizado correctamente.");
             cargarTabla();
             limpiarFormulario();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El precio debe ser un número válido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al actualizar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al actualizar: " + ex.getMessage());
         }
     }
 
     private void eliminarMenu() {
         if (idMenuSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un combo de la tabla para eliminar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un combo de la tabla para eliminar.");
             return;
         }
-        int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar el combo seleccionado? Se eliminará su composición.",
-                "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (confirmar == JOptionPane.YES_OPTION) {
+        boolean confirmar = FabricaDaisyUI.mostrarConfirmacion(this, "Confirmar Eliminación", "¿Desea eliminar el combo seleccionado? Se eliminará su composición.");
+        if (confirmar) {
             try {
                 for (DetalleMenu d : detalleMenuService.listarPorMenu(idMenuSeleccionado)) {
                     detalleMenuService.eliminar(d.getIdDetMen());
                 }
                 menuService.eliminar(idMenuSeleccionado);
+                FabricaDaisyUI.mostrarToastExito(this, "Combo eliminado correctamente.");
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                FabricaDaisyUI.mostrarError(this, "Error", "Error al eliminar: " + ex.getMessage());
             }
         }
     }
 
     private void agregarDetalle() {
         if (idMenuSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Primero debe seleccionar o guardar un combo para poder agregarle detalle.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Primero debe seleccionar o guardar un combo para poder agregarle detalle.");
             return;
         }
         if (!validarComposicionInputs()) {
@@ -571,7 +567,7 @@ public class MenuView extends JFrame {
     private void quitarDetalle() {
         int fila = tablaDetalle.getSelectedRow();
         if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione una fila del detalle para quitar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione una fila del detalle para quitar.");
             return;
         }
         try {
@@ -580,8 +576,9 @@ public class MenuView extends JFrame {
             if (idMenuSeleccionado != null) {
                 cargarDetalle(idMenuSeleccionado);
             }
+            FabricaDaisyUI.mostrarToastExito(this, "Elemento quitado del combo.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al quitar el detalle: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al quitar el detalle: " + ex.getMessage());
         }
     }
 
@@ -597,20 +594,20 @@ public class MenuView extends JFrame {
 
     private boolean validarFormulario() {
         if (txtCodigo.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El código del combo es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El código del combo es obligatorio.");
             return false;
         }
         if (txtNombre.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre del combo es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El nombre del combo es obligatorio.");
             return false;
         }
         try {
             if (leerDecimal(txtPrecio.getText()).compareTo(BigDecimal.ZERO) < 0) {
-                JOptionPane.showMessageDialog(this, "El precio no puede ser negativo.", "Validación", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El precio no puede ser negativo.");
                 return false;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El precio debe ser un número válido.");
             return false;
         }
         return true;

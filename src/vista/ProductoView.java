@@ -109,6 +109,7 @@ public class ProductoView extends JFrame {
         String[] columnas = {"ID", "Código", "Categoría", "Nombre", "Precio", "Existencia", "Estado"};
         modeloTabla.setColumnIdentifiers(columnas);
         tabla.setModel(modeloTabla);
+        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         tabla.getColumnModel().getColumn(6).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
 
@@ -199,8 +200,7 @@ public class ProductoView extends JFrame {
                 nombresCategoria.put(c.getIdCat(), c.getNombreCat());
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudieron cargar las categorías: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudieron cargar las categorías: " + ex.getMessage());
         }
     }
 
@@ -220,8 +220,7 @@ public class ProductoView extends JFrame {
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar la lista de productos: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudo cargar la lista de productos: " + ex.getMessage());
         }
     }
 
@@ -272,9 +271,9 @@ public class ProductoView extends JFrame {
         String codigo = txtCodigo.getText().trim();
         for (Productos p : productoService.listar()) {
             if (p.getCodigoPro().equalsIgnoreCase(codigo)) {
-                JOptionPane.showMessageDialog(this,
-                        "Ya existe un producto con el código '" + codigo + "'. Use el botón 'Modificar' para actualizar el registro existente.",
-                        "Código Duplicado", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this,
+                        "Código Duplicado",
+                        "Ya existe un producto con el código '" + codigo + "'. Use el botón 'Modificar' para actualizar el registro existente.");
                 return;
             }
         }
@@ -288,19 +287,19 @@ public class ProductoView extends JFrame {
             producto.setActivoPro("Activo".equals(cmbActivo.getSelectedItem()) ? "A" : "I");
 
             productoService.insertar(producto);
-            JOptionPane.showMessageDialog(this, "Producto guardado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Producto guardado correctamente.");
             cargarTabla();
             limpiarFormulario();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio y la existencia deben ser números válidos.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El precio y la existencia deben ser números válidos.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al guardar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al guardar: " + ex.getMessage());
         }
     }
 
     private void actualizarProducto() {
         if (idProductoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un producto de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un producto de la tabla.");
             return;
         }
         if (!validarFormulario()) {
@@ -309,9 +308,9 @@ public class ProductoView extends JFrame {
         String codigo = txtCodigo.getText().trim();
         for (Productos p : productoService.listar()) {
             if (p.getCodigoPro().equalsIgnoreCase(codigo) && p.getIdPro() != idProductoSeleccionado) {
-                JOptionPane.showMessageDialog(this,
-                        "Ya existe otro producto con el código '" + codigo + "'. Ingrese un código único.",
-                        "Código Duplicado", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this,
+                        "Código Duplicado",
+                        "Ya existe otro producto con el código '" + codigo + "'. Ingrese un código único.");
                 return;
             }
         }
@@ -326,26 +325,26 @@ public class ProductoView extends JFrame {
             producto.setActivoPro("Activo".equals(cmbActivo.getSelectedItem()) ? "A" : "I");
 
             productoService.actualizar(producto);
-            JOptionPane.showMessageDialog(this, "Producto actualizado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Producto actualizado correctamente.");
             cargarTabla();
             limpiarFormulario();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio y la existencia deben ser números válidos.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El precio y la existencia deben ser números válidos.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al actualizar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al actualizar: " + ex.getMessage());
         }
     }
 
     private void eliminarProducto() {
         if (idProductoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un producto de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un producto de la tabla.");
             return;
         }
-        int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar el producto seleccionado?", "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (confirmar == JOptionPane.YES_OPTION) {
+        boolean confirmar = FabricaDaisyUI.mostrarConfirmacion(this, "Confirmar Eliminación", "¿Desea eliminar el producto seleccionado?");
+        if (confirmar) {
             try {
                 productoService.eliminar(idProductoSeleccionado);
-                JOptionPane.showMessageDialog(this, "Producto eliminado correctamente.");
+                FabricaDaisyUI.mostrarToastExito(this, "Producto eliminado correctamente.");
                 cargarTabla();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
@@ -360,14 +359,14 @@ public class ProductoView extends JFrame {
                     if (p != null) {
                         p.setActivoPro("I");
                         productoService.actualizar(p);
-                        JOptionPane.showMessageDialog(this, "El producto está vinculado a recetas o combos, por lo que fue marcado como INACTIVO para proteger los catálogos.", "Información", JOptionPane.INFORMATION_MESSAGE);
+                        FabricaDaisyUI.mostrarInformacion(this, "Información", "El producto está vinculado a recetas o combos, por lo que fue marcado como INACTIVO para proteger los catálogos.");
                         cargarTabla();
                         limpiarFormulario();
                     } else {
-                        JOptionPane.showMessageDialog(this, "Error al eliminar: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        FabricaDaisyUI.mostrarError(this, "Error", "Error al eliminar: " + ex.getMessage());
                     }
                 } catch (RuntimeException exInactivar) {
-                    JOptionPane.showMessageDialog(this, "No se pudo procesar la solicitud: " + exInactivar.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    FabricaDaisyUI.mostrarError(this, "Error", "No se pudo procesar la solicitud: " + exInactivar.getMessage());
                 }
             }
         }
@@ -375,35 +374,35 @@ public class ProductoView extends JFrame {
 
     private boolean validarFormulario() {
         if (txtCodigo.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El código es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El código es obligatorio.");
             return false;
         }
         if (cmbCategoria.getSelectedIndex() == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione una categoría.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "Seleccione una categoría.");
             return false;
         }
         if (txtNombre.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre del producto es obligatorio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El nombre del producto es obligatorio.");
             return false;
         }
         try {
             BigDecimal precio = new BigDecimal(txtPrecio.getText().trim());
             if (precio.compareTo(BigDecimal.ZERO) < 0) {
-                JOptionPane.showMessageDialog(this, "El precio no puede ser negativo.", "Validación", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El precio no puede ser negativo.");
                 return false;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El precio debe ser un número válido.");
             return false;
         }
         try {
             BigDecimal existencia = new BigDecimal(txtExistencia.getText().trim());
             if (existencia.compareTo(BigDecimal.ZERO) < 0) {
-                JOptionPane.showMessageDialog(this, "La existencia no puede ser negativa.", "Validación", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "La existencia no puede ser negativa.");
                 return false;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "La existencia debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "La existencia debe ser un número válido.");
             return false;
         }
         return true;
