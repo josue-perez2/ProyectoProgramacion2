@@ -4,8 +4,11 @@ import model.Cliente;
 import model.DetalleMenu;
 import model.DetallesPedido;
 import model.DetalleSandwich;
+import model.ItemVenta;
+import model.MenuCompleto;
 import model.Menus;
 import model.Pedidos;
+import model.ProductoIndividual;
 import model.Productos;
 import model.Sandwich;
 import service.ClienteService;
@@ -455,6 +458,7 @@ public class PedidoView extends JFrame {
         btnVerFactura.setEnabled(esCobrado);
         btnAgregarItem.setEnabled(seleccionActiva && !bloqueado);
         btnQuitarItem.setEnabled(false);
+        cmbEstado.setEnabled(seleccionActiva && !bloqueado);
     }
 
     private boolean tieneTotalPositivo() {
@@ -748,7 +752,8 @@ public class PedidoView extends JFrame {
             pedido.setFechaPed(LocalDateTime.now());
             pedido.setTotalPed(BigDecimal.ZERO);
             pedido.setPuntosObtenidosPed(0);
-            pedido.setEstadoPed(estadoAbreviado((String) cmbEstado.getSelectedItem()));
+            pedido.setEstadoPed("P");
+            cmbEstado.setSelectedItem("Pendiente");
 
             pedidoService.insertar(pedido);
             int idGenerado = pedido.getIdPed();
@@ -787,8 +792,14 @@ public class PedidoView extends JFrame {
                 FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "El pedido no fue encontrado.");
                 return;
             }
+            String nuevoEstado = estadoAbreviado((String) cmbEstado.getSelectedItem());
+            if ("C".equalsIgnoreCase(nuevoEstado) && !"C".equalsIgnoreCase(pedido.getEstadoPed())) {
+                FabricaDaisyUI.mostrarAdvertencia(this, "Acción Inválida", "Para cobrar un pedido debe usar el botón 'Cobrar / Pagar' o la ventana de Cobros.");
+                cmbEstado.setSelectedItem(estadoCompleto(pedido.getEstadoPed()));
+                return;
+            }
             pedido.setIdCliPed(clienteActual.getIdCli());
-            pedido.setEstadoPed(estadoAbreviado((String) cmbEstado.getSelectedItem()));
+            pedido.setEstadoPed(nuevoEstado);
 
             pedidoService.actualizar(pedido);
             FabricaDaisyUI.mostrarToastExito(this, "Pedido actualizado correctamente.");
@@ -855,15 +866,16 @@ public class PedidoView extends JFrame {
         String tipoCodigo = tipoIndex == 0 ? TIPO_SANDWICH : (tipoIndex == 1 ? TIPO_MENU : TIPO_PRODUCTO);
         int idItem = tipoIndex == 0 ? idsSandwich.get(itemIndex) : (tipoIndex == 1 ? idsMenu.get(itemIndex) : idsProducto.get(itemIndex));
         BigDecimal precioUnitario = new BigDecimal(txtPrecioUnitario.getText().trim());
-        BigDecimal subtotal = precioUnitario.multiply(cantidad);
-        int puntosGenerados = 0;
-        if (TIPO_SANDWICH.equals(tipoCodigo)) {
-            puntosGenerados = cantidad.intValue() * 2;
-        } else if (TIPO_MENU.equals(tipoCodigo)) {
-            puntosGenerados = cantidad.intValue() * 8;
+
+        ItemVenta itemVenta;
+        String nombreItem = (String) cmbItem.getSelectedItem();
+        if (TIPO_MENU.equals(tipoCodigo)) {
+            itemVenta = new MenuCompleto(idItem, nombreItem, precioUnitario, cantidad);
         } else {
-            puntosGenerados = 0;
+            itemVenta = new ProductoIndividual(idItem, nombreItem, precioUnitario, cantidad, tipoCodigo);
         }
+        BigDecimal subtotal = itemVenta.calcularSubtotal();
+        int puntosGenerados = itemVenta.calcularPuntos();
 
         String errorStock = verificarDisponibilidadStock(idPedidoSeleccionado, tipoCodigo, idItem, cantidad);
         if (errorStock != null) {

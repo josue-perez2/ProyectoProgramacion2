@@ -1,5 +1,6 @@
 package service;
 
+import config.Conexion;
 import dao.CanjesDao;
 import dao.ClienteDao;
 import dao.DetalleMenuDao;
@@ -24,6 +25,8 @@ import model.Productos;
 import model.Recompensas;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -118,28 +121,50 @@ public class CanjesService {
             throw new IllegalStateException("Saldo de puntos insuficiente para canjear esta recompensa");
         }
 
-        descontarStockRecompensa(recompensa);
+        Connection conn = new Conexion().conectar();
+        boolean autoCommitOriginal = true;
+        try {
+            autoCommitOriginal = conn.getAutoCommit();
+            conn.setAutoCommit(false);
 
-        BigDecimal puntosDescontar = new BigDecimal(recompensa.getPuntosRequeridosRec());
-        cliente.setSaldoPuntoCli(cliente.getSaldoPuntoCli().subtract(puntosDescontar));
-        clienteDao.actualizar(cliente);
+            descontarStockRecompensa(recompensa);
 
-        Canjes canje = new Canjes();
-        canje.setIdCliCan(cliente.getIdCli());
-        canje.setIdRecCan(recompensa.getIdRec());
-        canje.setFechaCan(LocalDateTime.now());
-        canje.setPuntosRecompensaCan(recompensa.getPuntosRequeridosRec());
-        canjesDao.insertar(canje);
+            BigDecimal puntosDescontar = new BigDecimal(recompensa.getPuntosRequeridosRec());
+            cliente.setSaldoPuntoCli(cliente.getSaldoPuntoCli().subtract(puntosDescontar));
+            clienteDao.actualizar(cliente);
 
-        HistorialPuntos his = new HistorialPuntos();
-        his.setIdCliHis(cliente.getIdCli());
-        his.setFechaHis(LocalDateTime.now());
-        his.setTipoOperacionHis("S");
-        his.setPuntosHis(-recompensa.getPuntosRequeridosRec());
-        his.setReferenciaHis("Canje: " + recompensa.getNombreRec() + " (Canje #" + canje.getIdCan() + ")");
-        historialPuntosDao.insertar(his);
+            Canjes canje = new Canjes();
+            canje.setIdCliCan(cliente.getIdCli());
+            canje.setIdRecCan(recompensa.getIdRec());
+            canje.setFechaCan(LocalDateTime.now());
+            canje.setPuntosRecompensaCan(recompensa.getPuntosRequeridosRec());
+            canjesDao.insertar(canje);
 
-        return canje;
+            HistorialPuntos his = new HistorialPuntos();
+            his.setIdCliHis(cliente.getIdCli());
+            his.setFechaHis(LocalDateTime.now());
+            his.setTipoOperacionHis("S");
+            his.setPuntosHis(-recompensa.getPuntosRequeridosRec());
+            his.setReferenciaHis("Canje: " + recompensa.getNombreRec() + " (Canje #" + canje.getIdCan() + ")");
+            historialPuntosDao.insertar(his);
+
+            conn.commit();
+            return canje;
+        } catch (Exception ex) {
+            try {
+                conn.rollback();
+            } catch (SQLException ignored) {
+            }
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException) ex;
+            }
+            throw new RuntimeException("Error en transacción de canje: " + ex.getMessage(), ex);
+        } finally {
+            try {
+                conn.setAutoCommit(autoCommitOriginal);
+            } catch (SQLException ignored) {
+            }
+        }
     }
 
     public InfoDisponibilidad evaluarDisponibilidad(Recompensas recompensa, Map<Integer, Productos> mapaProductos) {

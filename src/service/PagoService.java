@@ -1,5 +1,6 @@
 package service;
 
+import config.Conexion;
 import dao.ClienteDao;
 import dao.DetalleMenuDao;
 import dao.DetalleSandwichDao;
@@ -29,6 +30,8 @@ import model.Pedidos;
 import model.Productos;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -85,33 +88,55 @@ public class PagoService {
         if (pago == null) {
             throw new IllegalStateException("No se puede eliminar: el registro de pago con ID " + id + " no existe.");
         }
-        Pedidos pedido = pedidosDao.buscarPorId(pago.getIdPedPag());
-        if (pedido != null) {
-            restaurarStockPedido(pedido.getIdPed());
-            pedido.setEstadoPed("P");
-            pedidosDao.actualizar(pedido);
-            if (pedido.getPuntosObtenidosPed() > 0) {
-                Cliente cliente = clienteDao.buscarClientePorId(pedido.getIdCliPed());
-                if (cliente != null && cliente.getSaldoPuntoCli() != null) {
-                    BigDecimal puntosRestar = new BigDecimal(pedido.getPuntosObtenidosPed());
-                    BigDecimal nuevoSaldo = cliente.getSaldoPuntoCli().subtract(puntosRestar);
-                    if (nuevoSaldo.compareTo(BigDecimal.ZERO) < 0) {
-                        nuevoSaldo = BigDecimal.ZERO;
-                    }
-                    cliente.setSaldoPuntoCli(nuevoSaldo);
-                    clienteDao.actualizar(cliente);
+        Connection conn = new Conexion().conectar();
+        boolean autoCommitOriginal = true;
+        try {
+            autoCommitOriginal = conn.getAutoCommit();
+            conn.setAutoCommit(false);
 
-                    HistorialPuntos his = new HistorialPuntos();
-                    his.setIdCliHis(cliente.getIdCli());
-                    his.setFechaHis(LocalDateTime.now());
-                    his.setTipoOperacionHis("S");
-                    his.setPuntosHis(-pedido.getPuntosObtenidosPed());
-                    his.setReferenciaHis("Anulacion de Pago Pedido #" + pedido.getIdPed());
-                    historialPuntosDao.insertar(his);
+            Pedidos pedido = pedidosDao.buscarPorId(pago.getIdPedPag());
+            if (pedido != null) {
+                restaurarStockPedido(pedido.getIdPed());
+                pedido.setEstadoPed("P");
+                pedidosDao.actualizar(pedido);
+                if (pedido.getPuntosObtenidosPed() > 0) {
+                    Cliente cliente = clienteDao.buscarClientePorId(pedido.getIdCliPed());
+                    if (cliente != null && cliente.getSaldoPuntoCli() != null) {
+                        BigDecimal puntosRestar = new BigDecimal(pedido.getPuntosObtenidosPed());
+                        BigDecimal nuevoSaldo = cliente.getSaldoPuntoCli().subtract(puntosRestar);
+                        if (nuevoSaldo.compareTo(BigDecimal.ZERO) < 0) {
+                            nuevoSaldo = BigDecimal.ZERO;
+                        }
+                        cliente.setSaldoPuntoCli(nuevoSaldo);
+                        clienteDao.actualizar(cliente);
+
+                        HistorialPuntos his = new HistorialPuntos();
+                        his.setIdCliHis(cliente.getIdCli());
+                        his.setFechaHis(LocalDateTime.now());
+                        his.setTipoOperacionHis("S");
+                        his.setPuntosHis(-pedido.getPuntosObtenidosPed());
+                        his.setReferenciaHis("Anulacion de Pago Pedido #" + pedido.getIdPed());
+                        historialPuntosDao.insertar(his);
+                    }
                 }
             }
+            pagosDao.eliminar(id);
+            conn.commit();
+        } catch (Exception ex) {
+            try {
+                conn.rollback();
+            } catch (SQLException ignored) {
+            }
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException) ex;
+            }
+            throw new RuntimeException("Error en reversión de pago: " + ex.getMessage(), ex);
+        } finally {
+            try {
+                conn.setAutoCommit(autoCommitOriginal);
+            } catch (SQLException ignored) {
+            }
         }
-        pagosDao.eliminar(id);
     }
 
     public void procesarPago(Pagos pago, Pedidos pedido, Cliente cliente) {
@@ -126,26 +151,49 @@ public class PagoService {
             throw new IllegalStateException("El pedido #" + pedido.getIdPed() + " ya cuenta con un pago registrado (ID: " + pagoExistente.getIdPad() + ").");
         }
 
-        validarStockPedido(pedido.getIdPed());
-        descontarStockPedido(pedido.getIdPed());
+        Connection conn = new Conexion().conectar();
+        boolean autoCommitOriginal = true;
+        try {
+            autoCommitOriginal = conn.getAutoCommit();
+            conn.setAutoCommit(false);
 
-        pagosDao.insertar(pago);
+            validarStockPedido(pedido.getIdPed());
+            descontarStockPedido(pedido.getIdPed());
 
-        pedido.setEstadoPed("C");
-        pedidosDao.actualizar(pedido);
+            pagosDao.insertar(pago);
 
-        if (cliente != null && pedido.getPuntosObtenidosPed() > 0) {
-            BigDecimal puntosNuevos = new BigDecimal(pedido.getPuntosObtenidosPed());
-            cliente.setSaldoPuntoCli(cliente.getSaldoPuntoCli().add(puntosNuevos));
-            clienteDao.actualizar(cliente);
+            pedido.setEstadoPed("C");
+            pedidosDao.actualizar(pedido);
 
-            HistorialPuntos his = new HistorialPuntos();
-            his.setIdCliHis(cliente.getIdCli());
-            his.setFechaHis(LocalDateTime.now());
-            his.setTipoOperacionHis("E");
-            his.setPuntosHis(pedido.getPuntosObtenidosPed());
-            his.setReferenciaHis("Pago Pedido #" + pedido.getIdPed());
-            historialPuntosDao.insertar(his);
+            if (cliente != null && pedido.getPuntosObtenidosPed() > 0) {
+                BigDecimal puntosNuevos = new BigDecimal(pedido.getPuntosObtenidosPed());
+                cliente.setSaldoPuntoCli(cliente.getSaldoPuntoCli().add(puntosNuevos));
+                clienteDao.actualizar(cliente);
+
+                HistorialPuntos his = new HistorialPuntos();
+                his.setIdCliHis(cliente.getIdCli());
+                his.setFechaHis(LocalDateTime.now());
+                his.setTipoOperacionHis("E");
+                his.setPuntosHis(pedido.getPuntosObtenidosPed());
+                his.setReferenciaHis("Pago Pedido #" + pedido.getIdPed());
+                historialPuntosDao.insertar(his);
+            }
+
+            conn.commit();
+        } catch (Exception ex) {
+            try {
+                conn.rollback();
+            } catch (SQLException ignored) {
+            }
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException) ex;
+            }
+            throw new RuntimeException("Error en transacción de cobro: " + ex.getMessage(), ex);
+        } finally {
+            try {
+                conn.setAutoCommit(autoCommitOriginal);
+            } catch (SQLException ignored) {
+            }
         }
     }
 
