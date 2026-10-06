@@ -45,6 +45,7 @@ public class PagoView extends JFrame {
     private final JButton btnEliminar = FabricaDaisyUI.crearBotonPeligro("Eliminar", Icons.trash(16), null);
     private final JButton btnLimpiar = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(16), null);
     private final JButton btnRegresar = FabricaDaisyUI.crearBotonNeutral("Volver", Icons.arrowLeft(16), null);
+    private final JButton btnTerminalTarjeta = FabricaDaisyUI.crearBotonSecundario("Cobrar con Tarjeta", Icons.creditCard(16), null);
 
     private final List<Integer> idsPedido = new ArrayList<>();
     private final List<BigDecimal> totalesPedido = new ArrayList<>();
@@ -128,8 +129,32 @@ public class PagoView extends JFrame {
             }
         });
 
+        btnTerminalTarjeta.setPreferredSize(new Dimension(190, 36));
+        btnTerminalTarjeta.setEnabled(false);
+        btnTerminalTarjeta.addActionListener(e -> abrirSimuladorTarjeta());
+
         txtReferencia.setPreferredSize(new Dimension(160, 36));
         cmbMetodoPago.setPreferredSize(new Dimension(180, 36));
+        cmbMetodoPago.addActionListener(e -> {
+            String sel = (String) cmbMetodoPago.getSelectedItem();
+            boolean esTarjeta = sel != null && sel.toLowerCase().contains("tarjeta");
+            int idx = cmbPedido.getSelectedIndex();
+            boolean pendienteValido = false;
+            if (idx != -1 && idx < estadosPedido.size() && idx < totalesPedido.size()) {
+                pendienteValido = "P".equalsIgnoreCase(estadosPedido.get(idx)) && totalesPedido.get(idx).compareTo(BigDecimal.ZERO) > 0;
+            }
+            btnTerminalTarjeta.setEnabled(esTarjeta && pendienteValido);
+            if (esTarjeta && pendienteValido) {
+                BigDecimal tot = totalesPedido.get(idx);
+                txtMontoRecibido.setText(tot.toPlainString());
+                txtCambio.setText("0.00");
+                abrirSimuladorTarjeta();
+            } else if (!esTarjeta) {
+                if (txtReferencia.getText().trim().startsWith("AUTH-")) {
+                    txtReferencia.setText("");
+                }
+            }
+        });
 
         cmbPedido.setPreferredSize(new Dimension(280, 36));
         cmbPedido.addActionListener(e -> seleccionarPedidoDeCombo());
@@ -145,7 +170,8 @@ public class PagoView extends JFrame {
         panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Método de Pago:", cmbMetodoPago));
         panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Monto Recibido (Q):", txtMontoRecibido));
         panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Cambio (Q):", txtCambio));
-        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("No. Referencia:", txtReferencia));
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("No. Referencia / Auth:", txtReferencia));
+        panelCamposCobro.add(FabricaDaisyUI.crearCampoConEtiqueta("Terminal POS:", btnTerminalTarjeta));
 
         JPanel tarjetaCobro = FabricaDaisyUI.crearTarjetaSeccion(
                 "Cobro de Pedido",
@@ -155,6 +181,7 @@ public class PagoView extends JFrame {
 
         modeloPagos.setColumnIdentifiers(new String[]{"ID Pago", "ID Pedido", "Fecha", "Método", "Monto Recibido", "Cambio", "Referencia", "Estado"});
         tablaPagos.setModel(modeloPagos);
+        tablaPagos.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaPagos);
 
         TableColumnModel colModel = tablaPagos.getColumnModel();
@@ -240,7 +267,12 @@ public class PagoView extends JFrame {
 
     private void actualizarEstadoBotones(boolean seleccionActiva) {
         btnEliminar.setEnabled(seleccionActiva);
-        btnVerFactura.setEnabled(seleccionActiva || cmbPedido.getSelectedIndex() != -1);
+        boolean cobradoEnCombo = false;
+        int idx = cmbPedido.getSelectedIndex();
+        if (idx != -1 && idx < estadosPedido.size()) {
+            cobradoEnCombo = "C".equalsIgnoreCase(estadosPedido.get(idx));
+        }
+        btnVerFactura.setEnabled(seleccionActiva || cobradoEnCombo);
     }
 
     private void cargarPedidos() {
@@ -264,8 +296,7 @@ public class PagoView extends JFrame {
                 estadosPedido.add(p.getEstadoPed());
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudieron cargar los pedidos: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error de Datos", "No se pudieron cargar los pedidos: " + ex.getMessage());
         }
     }
 
@@ -311,6 +342,11 @@ public class PagoView extends JFrame {
         }
 
         txtMontoRecibido.setText(total.toPlainString());
+        String selMetodo = (String) cmbMetodoPago.getSelectedItem();
+        boolean esTarjeta = selMetodo != null && selMetodo.toLowerCase().contains("tarjeta");
+        boolean esPendienteConTotal = "P".equalsIgnoreCase(estado) && total.compareTo(BigDecimal.ZERO) > 0;
+        btnTerminalTarjeta.setEnabled(esTarjeta && esPendienteConTotal);
+        actualizarEstadoBotones(tablaPagos.getSelectedRow() != -1);
         calcularCambio();
     }
 
@@ -359,8 +395,7 @@ public class PagoView extends JFrame {
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar el historial de pagos: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error de Datos", "No se pudo cargar el historial de pagos: " + ex.getMessage());
         }
     }
 
@@ -389,28 +424,65 @@ public class PagoView extends JFrame {
         actualizarEstadoBotones(true);
     }
 
-    private void procesarCobro() {
+    private void abrirSimuladorTarjeta() {
         int index = cmbPedido.getSelectedIndex();
         if (index == -1 || index >= idsPedido.size()) {
-            JOptionPane.showMessageDialog(this, "Seleccione un pedido válido para cobrar.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Selección Requerida", "Seleccione primero un pedido para ingresar los datos de la tarjeta.");
             return;
         }
 
         int idPed = idsPedido.get(index);
         Pedidos pedido = pedidoService.buscarPorId(idPed);
         if (pedido == null) {
-            JOptionPane.showMessageDialog(this, "El pedido no fue encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El pedido no fue encontrado.");
             return;
         }
 
         if ("C".equalsIgnoreCase(pedido.getEstadoPed())) {
-            JOptionPane.showMessageDialog(this, "Este pedido ya fue pagado.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
+            FabricaDaisyUI.mostrarInformacion(this, "Aviso", "Este pedido ya se encuentra pagado.");
+            return;
+        }
+
+        BigDecimal total = pedido.getTotalPed();
+        if (total == null || total.compareTo(BigDecimal.ZERO) <= 0) {
+            FabricaDaisyUI.mostrarAdvertencia(this, "Total Inválido", "No se puede procesar cobro con tarjeta para un pedido con total Q0.00.");
+            return;
+        }
+
+        SimuladorTarjetaDialog simDialog = new SimuladorTarjetaDialog(this, idPed, total);
+        simDialog.setVisible(true);
+
+        if (simDialog.isAprobada()) {
+            String ref = simDialog.getCodigoAutorizacion() + " (" + simDialog.getTarjetaEnmascarada() + ")";
+            txtReferencia.setText(ref);
+            txtMontoRecibido.setText(total.toPlainString());
+            txtCambio.setText("0.00");
+            btnProcesar.setEnabled(true);
+        }
+    }
+
+    private void procesarCobro() {
+        int index = cmbPedido.getSelectedIndex();
+        if (index == -1 || index >= idsPedido.size()) {
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "Seleccione un pedido válido para cobrar.");
+            return;
+        }
+
+        int idPed = idsPedido.get(index);
+        Pedidos pedido = pedidoService.buscarPorId(idPed);
+        if (pedido == null) {
+            FabricaDaisyUI.mostrarError(this, "Error", "El pedido no fue encontrado.");
+            return;
+        }
+
+        if ("C".equalsIgnoreCase(pedido.getEstadoPed())) {
+            FabricaDaisyUI.mostrarInformacion(this, "Aviso", "Este pedido ya fue pagado.");
             return;
         }
 
         BigDecimal total = pedido.getTotalPed();
         if (total.compareTo(BigDecimal.ZERO) <= 0) {
-            JOptionPane.showMessageDialog(this, "No se puede procesar el cobro de un pedido con total Q0.00.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "No se puede procesar el cobro de un pedido con total Q0.00.");
             return;
         }
 
@@ -418,19 +490,35 @@ public class PagoView extends JFrame {
         try {
             montoRecibido = new BigDecimal(txtMontoRecibido.getText().trim());
             if (montoRecibido.compareTo(total) < 0) {
-                JOptionPane.showMessageDialog(this,
-                        "El monto recibido (Q" + montoRecibido + ") es menor que el total a pagar (Q" + total + ").",
-                        "Validación", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Validación",
+                        "El monto recibido (Q" + montoRecibido + ") es menor que el total a pagar (Q" + total + ").");
                 return;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "El monto recibido debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "El monto recibido debe ser un número válido.");
             return;
         }
 
         BigDecimal cambio = montoRecibido.subtract(total);
         String metodo = metodoAbreviado((String) cmbMetodoPago.getSelectedItem());
         String referencia = txtReferencia.getText().trim();
+
+        boolean esTarjeta = "TC".equalsIgnoreCase(metodo) || "T".equalsIgnoreCase(metodo)
+                || (cmbMetodoPago.getSelectedItem() != null && cmbMetodoPago.getSelectedItem().toString().toLowerCase().contains("tarjeta"));
+
+        if (esTarjeta) {
+            if (!referencia.startsWith("AUTH-")) {
+                abrirSimuladorTarjeta();
+                referencia = txtReferencia.getText().trim();
+                if (!referencia.startsWith("AUTH-")) {
+                    return;
+                }
+            }
+            montoRecibido = total;
+            cambio = BigDecimal.ZERO;
+            txtMontoRecibido.setText(total.toPlainString());
+            txtCambio.setText("0.00");
+        }
 
         try {
             Pagos pago = new Pagos();
@@ -445,10 +533,14 @@ public class PagoView extends JFrame {
             Cliente cliente = clienteService.buscarClientePorId(pedido.getIdCliPed());
             pagoService.procesarPago(pago, pedido, cliente);
 
-            JOptionPane.showMessageDialog(this, "Cobro completado con éxito.\n"
-                    + "Pedido #" + idPed + " marcado como Pagado.\n"
-                    + "Puntos acreditados: " + pedido.getPuntosObtenidosPed() + "\n"
-                    + "Cambio a entregar: Q" + cambio.toPlainString());
+            FabricaDaisyUI.mostrarExito(this, "Cobro Completado con Éxito",
+                    "El cobro del pedido ha sido registrado correctamente.\n\n"
+                    + "• No. Pedido: #" + idPed + " (Estado: PAGADO)\n"
+                    + "• Método de Pago: " + cmbMetodoPago.getSelectedItem() + "\n"
+                    + (referencia != null && !referencia.isEmpty() ? "• No. Autorización / Ref: " + referencia + "\n" : "")
+                    + "• Total Cobrado: Q" + total.toPlainString() + "\n"
+                    + "• Cambio Entregado: Q" + cambio.toPlainString() + "\n"
+                    + "• Puntos Fidelidad Sumados: " + pedido.getPuntosObtenidosPed() + " pts");
 
             cargarPedidos();
             cargarTablaPagos();
@@ -457,7 +549,7 @@ public class PagoView extends JFrame {
             FacturaView factura = new FacturaView(this, idPed);
             factura.setVisible(true);
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al procesar el pago: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error al Procesar Cobro", ex.getMessage());
         }
     }
 
@@ -470,28 +562,32 @@ public class PagoView extends JFrame {
         }
         int index = cmbPedido.getSelectedIndex();
         if (index != -1 && index < idsPedido.size()) {
+            String est = estadosPedido.get(index);
+            if (!"C".equalsIgnoreCase(est)) {
+                FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "El pedido seleccionado aún no ha sido cobrado. Las facturas solo se generan para pedidos pagados.");
+                return;
+            }
             int idPed = idsPedido.get(index);
             new FacturaView(this, idPed).setVisible(true);
             return;
         }
-        JOptionPane.showMessageDialog(this, "Seleccione un pago de la tabla o un pedido para ver su factura.", "Aviso", JOptionPane.WARNING_MESSAGE);
+        FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un pago de la tabla o un pedido cobrado para ver su factura.");
     }
 
     private void eliminarPago() {
         if (idPagoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un pago de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un pago de la tabla.");
             return;
         }
-        int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar el registro de pago seleccionado?",
-                "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (confirmar == JOptionPane.YES_OPTION) {
+        boolean confirmar = FabricaDaisyUI.mostrarConfirmacion(this, "Confirmar Anulación", "¿Desea eliminar el registro de pago seleccionado?");
+        if (confirmar) {
             try {
                 pagoService.eliminar(idPagoSeleccionado);
-                JOptionPane.showMessageDialog(this, "Pago eliminado correctamente.");
+                FabricaDaisyUI.mostrarExito(this, "Pago Eliminado", "El pago seleccionado ha sido eliminado correctamente.");
                 cargarTablaPagos();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar pago: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                FabricaDaisyUI.mostrarError(this, "Error al Eliminar", ex.getMessage());
             }
         }
     }
@@ -500,6 +596,7 @@ public class PagoView extends JFrame {
         idPagoSeleccionado = null;
         txtReferencia.setText("");
         cmbMetodoPago.setSelectedIndex(0);
+        btnTerminalTarjeta.setEnabled(false);
         tablaPagos.clearSelection();
         seleccionarPedidoDeCombo();
         actualizarEstadoBotones(false);

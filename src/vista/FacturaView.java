@@ -133,7 +133,13 @@ public class FacturaView extends JDialog {
     private void construirFactura() {
         Pedidos pedido = pedidoService.buscarPorId(idPedido);
         if (pedido == null) {
-            JOptionPane.showMessageDialog(this, "El pedido #" + idPedido + " no existe.", "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El pedido #" + idPedido + " no existe.");
+            return;
+        }
+
+        if (!"C".equalsIgnoreCase(pedido.getEstadoPed())) {
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "El pedido #" + idPedido + " aún no ha sido cobrado. Solo los pedidos pagados cuentan con factura.");
+            dispose();
             return;
         }
 
@@ -162,9 +168,9 @@ public class FacturaView extends JDialog {
         if (job.printDialog()) {
             try {
                 job.print();
-                JOptionPane.showMessageDialog(this, "Documento enviado a impresión.");
+                FabricaDaisyUI.mostrarToastExito(this, "Documento enviado a impresión.");
             } catch (PrinterException ex) {
-                JOptionPane.showMessageDialog(this, "Error al imprimir: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                FabricaDaisyUI.mostrarError(this, "Error", "Error al imprimir: " + ex.getMessage());
             }
         }
     }
@@ -180,9 +186,9 @@ public class FacturaView extends JDialog {
         if (selector.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
                 ImageIO.write(imagen, "png", selector.getSelectedFile());
-                JOptionPane.showMessageDialog(this, "Factura guardada exitosamente en:\n" + selector.getSelectedFile().getAbsolutePath());
+                FabricaDaisyUI.mostrarToastExito(this, "Factura guardada exitosamente en:\n" + selector.getSelectedFile().getAbsolutePath());
             } catch (IOException ex) {
-                JOptionPane.showMessageDialog(this, "Error al guardar la imagen: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                FabricaDaisyUI.mostrarError(this, "Error", "Error al guardar la imagen: " + ex.getMessage());
             }
         }
     }

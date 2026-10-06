@@ -1,17 +1,22 @@
 package vista;
 
 import model.Cliente;
+import model.DetalleMenu;
 import model.DetallesPedido;
+import model.DetalleSandwich;
 import model.Menus;
 import model.Pedidos;
 import model.Productos;
 import model.Sandwich;
 import service.ClienteService;
+import service.DetalleMenuService;
 import service.DetallePedidoService;
+import service.DetalleSandwichService;
 import service.MenuService;
 import service.PedidoService;
 import service.ProductoService;
 import service.SandwichService;
+import util.ExportadorCSV;
 import util.FormatoTexto;
 import vista.util.FabricaDaisyUI;
 import vista.util.Icons;
@@ -27,7 +32,9 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PedidoView extends JFrame {
 
@@ -41,6 +48,8 @@ public class PedidoView extends JFrame {
     private final SandwichService sandwichService;
     private final MenuService menuService;
     private final ProductoService productoService;
+    private final DetalleSandwichService detalleSandwichService;
+    private final DetalleMenuService detalleMenuService;
 
     private final Window parent;
     private final Cliente clienteInicial;
@@ -63,6 +72,7 @@ public class PedidoView extends JFrame {
     private final JComboBox<String> cmbItem = new JComboBox<>();
     private final JTextField txtCantidad = new JTextField();
     private final JTextField txtPrecioUnitario = new JTextField();
+    private final JLabel lblStockDisponible = new JLabel("Stock: -");
 
     private final JButton btnGuardar = FabricaDaisyUI.crearBotonPrimario("Guardar Pedido", Icons.save(16), null);
     private final JButton btnCobrar = FabricaDaisyUI.crearBotonSecundario("Cobrar / Pagar", Icons.creditCard(16), null);
@@ -118,6 +128,8 @@ public class PedidoView extends JFrame {
         this.sandwichService = new SandwichService();
         this.menuService = new MenuService();
         this.productoService = new ProductoService();
+        this.detalleSandwichService = new DetalleSandwichService();
+        this.detalleMenuService = new DetalleMenuService();
 
         iniciarComponentes();
         cargarCatalogosItems();
@@ -239,8 +251,15 @@ public class PedidoView extends JFrame {
         panelDetalleCampos.add(FabricaDaisyUI.crearCampoConEtiqueta("Precio Unitario (Q):", txtPrecioUnitario));
         panelDetalleCampos.add(FabricaDaisyUI.crearCampoConEtiqueta("Cantidad:", txtCantidad));
 
-        JPanel panelDetalleAcciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 2));
+        JPanel panelDetalleAcciones = new JPanel(new BorderLayout(8, 0));
         panelDetalleAcciones.setOpaque(false);
+
+        lblStockDisponible.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblStockDisponible.setBorder(BorderFactory.createEmptyBorder(0, 4, 0, 0));
+        panelDetalleAcciones.add(lblStockDisponible, BorderLayout.WEST);
+
+        JPanel panelBotonesDet = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        panelBotonesDet.setOpaque(false);
 
         btnAgregarItem.setPreferredSize(new Dimension(145, 34));
         btnQuitarItem.setPreferredSize(new Dimension(145, 34));
@@ -253,8 +272,9 @@ public class PedidoView extends JFrame {
         btnAgregarItem.addActionListener(e -> agregarDetalle());
         btnQuitarItem.addActionListener(e -> quitarDetalle());
 
-        panelDetalleAcciones.add(btnAgregarItem);
-        panelDetalleAcciones.add(btnQuitarItem);
+        panelBotonesDet.add(btnAgregarItem);
+        panelBotonesDet.add(btnQuitarItem);
+        panelDetalleAcciones.add(panelBotonesDet, BorderLayout.EAST);
 
         panelDetalleContenedor.add(panelDetalleCampos, BorderLayout.CENTER);
         panelDetalleContenedor.add(panelDetalleAcciones, BorderLayout.SOUTH);
@@ -273,6 +293,7 @@ public class PedidoView extends JFrame {
 
         modeloPedidos.setColumnIdentifiers(new String[]{"ID", "Cliente", "Fecha", "Total", "Puntos", "Estado"});
         tablaPedidos.setModel(modeloPedidos);
+        tablaPedidos.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaPedidos);
 
         TableColumnModel colModel = tablaPedidos.getColumnModel();
@@ -299,9 +320,10 @@ public class PedidoView extends JFrame {
         });
         tablaPedidos.getColumnModel().getColumn(5).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
         JScrollPane scrollPedidos = new JScrollPane(tablaPedidos);
-        scrollPedidos.setPreferredSize(new Dimension(540, 320));
         scrollPedidos.setBorder(BorderFactory.createEmptyBorder());
 
+        JButton btnExportarPedidos = FabricaDaisyUI.crearBotonExportarCsv(e ->
+                ExportadorCSV.exportarTabla(this, tablaPedidos, "Historial_Pedidos"));
         JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
             if (clienteActual != null) {
                 Cliente ref = clienteService.buscarClientePorId(clienteActual.getIdCli());
@@ -313,14 +335,20 @@ public class PedidoView extends JFrame {
             cargarTablaPedidos();
         });
 
+        JPanel panelAccionesPedidos = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
+        panelAccionesPedidos.setOpaque(false);
+        panelAccionesPedidos.add(btnExportarPedidos);
+        panelAccionesPedidos.add(btnRefrescar);
+
         JPanel tarjetaPedidos = FabricaDaisyUI.crearTarjetaSeccionConBoton(
                 "Historial de Pedidos",
-                btnRefrescar,
+                panelAccionesPedidos,
                 scrollPedidos
         );
 
         modeloDetalle.setColumnIdentifiers(new String[]{"ID", "Tipo", "Item", "Cantidad", "Precio Unitario", "Subtotal", "Puntos"});
         tablaDetalle.setModel(modeloDetalle);
+        tablaDetalle.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaDetalle);
 
         TableColumnModel colDetModel = tablaDetalle.getColumnModel();
@@ -342,7 +370,6 @@ public class PedidoView extends JFrame {
         });
 
         JScrollPane scrollDetalle = new JScrollPane(tablaDetalle);
-        scrollDetalle.setPreferredSize(new Dimension(540, 320));
         scrollDetalle.setBorder(BorderFactory.createEmptyBorder());
 
         JPanel tarjetaDetalleTabla = FabricaDaisyUI.crearTarjetaSeccion(
@@ -415,11 +442,17 @@ public class PedidoView extends JFrame {
     }
 
     private void actualizarEstadoBotones(boolean seleccionActiva, boolean bloqueado) {
-        btnGuardar.setEnabled(!seleccionActiva);
+        boolean clienteValido = clienteActual != null && "A".equalsIgnoreCase(clienteActual.getEstadoCli());
+        btnGuardar.setEnabled(!seleccionActiva && clienteValido);
         btnModificar.setEnabled(seleccionActiva && !bloqueado);
         btnEliminar.setEnabled(seleccionActiva);
         btnCobrar.setEnabled(seleccionActiva && !bloqueado && tieneTotalPositivo());
-        btnVerFactura.setEnabled(seleccionActiva);
+        boolean esCobrado = false;
+        if (seleccionActiva && idPedidoSeleccionado != null) {
+            Pedidos p = pedidoService.buscarPorId(idPedidoSeleccionado);
+            esCobrado = p != null && "C".equalsIgnoreCase(p.getEstadoPed());
+        }
+        btnVerFactura.setEnabled(esCobrado);
         btnAgregarItem.setEnabled(seleccionActiva && !bloqueado);
         btnQuitarItem.setEnabled(false);
     }
@@ -437,34 +470,32 @@ public class PedidoView extends JFrame {
         String textoDpi = txtDpiCliente.getText().trim();
         String soloDigitos = FormatoTexto.soloDigitos(textoDpi);
         if (soloDigitos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Por favor ingrese el número de DPI del cliente a buscar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Por favor ingrese el número de DPI del cliente a buscar.");
             return;
         }
         Cliente c = clienteService.buscarPorDpi(soloDigitos);
         if (c == null) {
-            int opcion = JOptionPane.showConfirmDialog(
+            boolean opcion = FabricaDaisyUI.mostrarConfirmacion(
                     this,
-                    "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al cliente ahora?",
                     "Cliente No Encontrado",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
+                    "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al cliente ahora?"
             );
-            if (opcion == JOptionPane.YES_OPTION) {
+            if (opcion) {
                 new ClienteView(this, soloDigitos).setVisible(true);
             }
             return;
         }
         if (!"A".equalsIgnoreCase(c.getEstadoCli())) {
-            JOptionPane.showMessageDialog(
+            FabricaDaisyUI.mostrarError(
                     this,
-                    "El cliente " + c.getNombreCli() + " se encuentra INACTIVO.\nNo es posible registrar pedidos a clientes inactivos.",
                     "Cliente Inactivo",
-                    JOptionPane.ERROR_MESSAGE
+                    "El cliente " + c.getNombreCli() + " se encuentra INACTIVO.\nNo es posible registrar pedidos a clientes inactivos."
             );
             asignarClienteActual(null);
             return;
         }
         asignarClienteActual(c);
+        FabricaDaisyUI.mostrarToastExito(this, "Cliente seleccionado: " + c.getNombreCli());
     }
 
     private void registrarNuevoCliente() {
@@ -488,6 +519,9 @@ public class PedidoView extends JFrame {
             lblTelefonoCliente.setText("Tel: -");
             lblSaldoPuntos.setText("Saldo: 0 pts");
             lblSaldoPuntos.setForeground(Color.GRAY);
+        }
+        if (idPedidoSeleccionado == null) {
+            btnGuardar.setEnabled(c != null && "A".equalsIgnoreCase(c.getEstadoCli()));
         }
     }
 
@@ -559,18 +593,30 @@ public class PedidoView extends JFrame {
         int itemIndex = cmbItem.getSelectedIndex();
         if (itemIndex == -1) {
             txtPrecioUnitario.setText("0.00");
+            lblStockDisponible.setText("Stock: -");
             return;
         }
         int tipoIndex = cmbTipoItem.getSelectedIndex();
         BigDecimal precio = BigDecimal.ZERO;
+        String tipoCodigo = tipoIndex == 0 ? TIPO_SANDWICH : (tipoIndex == 1 ? TIPO_MENU : TIPO_PRODUCTO);
+        int idItem = -1;
         if (tipoIndex == 0 && itemIndex < preciosSandwich.size()) {
             precio = preciosSandwich.get(itemIndex);
+            idItem = idsSandwich.get(itemIndex);
         } else if (tipoIndex == 1 && itemIndex < preciosMenu.size()) {
             precio = preciosMenu.get(itemIndex);
+            idItem = idsMenu.get(itemIndex);
         } else if (tipoIndex == 2 && itemIndex < preciosProducto.size()) {
             precio = preciosProducto.get(itemIndex);
+            idItem = idsProducto.get(itemIndex);
         }
         txtPrecioUnitario.setText(precio.toPlainString());
+
+        if (idItem != -1) {
+            actualizarIndicadorStock(tipoCodigo, idItem);
+        } else {
+            lblStockDisponible.setText("Stock: -");
+        }
     }
 
     private void cargarTablaPedidos() {
@@ -592,8 +638,7 @@ public class PedidoView extends JFrame {
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar la lista de pedidos: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudo cargar la lista de pedidos: " + ex.getMessage());
         }
     }
 
@@ -649,8 +694,7 @@ public class PedidoView extends JFrame {
                 });
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo cargar el detalle del pedido: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "No se pudo cargar el detalle del pedido: " + ex.getMessage());
         }
     }
 
@@ -691,11 +735,11 @@ public class PedidoView extends JFrame {
 
     private void guardarPedido() {
         if (clienteActual == null) {
-            JOptionPane.showMessageDialog(this, "Debe buscar y seleccionar un cliente activo antes de guardar el pedido.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Debe buscar y seleccionar un cliente activo antes de guardar el pedido.");
             return;
         }
         if (!"A".equalsIgnoreCase(clienteActual.getEstadoCli())) {
-            JOptionPane.showMessageDialog(this, "El cliente seleccionado se encuentra inactivo. No se pueden registrar pedidos.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "El cliente seleccionado se encuentra inactivo. No se pueden registrar pedidos.");
             return;
         }
         try {
@@ -715,82 +759,81 @@ public class PedidoView extends JFrame {
                     pedido.setIdPed(idGenerado);
                 }
             }
-            JOptionPane.showMessageDialog(this, "Pedido creado correctamente. Ahora puede agregarle items.");
+            FabricaDaisyUI.mostrarExito(this, "Pedido Creado", "Pedido creado correctamente. Ahora puede agregarle items.");
             cargarTablaPedidos();
             seleccionarEnTabla(idGenerado);
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al guardar pedido: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al guardar pedido: " + ex.getMessage());
         }
     }
 
     private void actualizarPedido() {
         if (idPedidoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un pedido de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un pedido de la tabla.");
             return;
         }
         if (esPedidoBloqueado()) {
-            JOptionPane.showMessageDialog(this, "No se puede modificar un pedido que ya está pagado o anulado.", "Operación Bloqueada", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Operación Bloqueada", "No se puede modificar un pedido que ya está pagado o anulado.");
             return;
         }
         if (clienteActual == null) {
-            JOptionPane.showMessageDialog(this, "Debe buscar y seleccionar un cliente para el pedido.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Debe buscar y seleccionar un cliente para el pedido.");
             return;
         }
         try {
             int idPed = idPedidoSeleccionado;
             Pedidos pedido = pedidoService.buscarPorId(idPed);
             if (pedido == null) {
-                JOptionPane.showMessageDialog(this, "El pedido no fue encontrado.", "Aviso", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "El pedido no fue encontrado.");
                 return;
             }
             pedido.setIdCliPed(clienteActual.getIdCli());
             pedido.setEstadoPed(estadoAbreviado((String) cmbEstado.getSelectedItem()));
 
             pedidoService.actualizar(pedido);
-            JOptionPane.showMessageDialog(this, "Pedido actualizado correctamente.");
+            FabricaDaisyUI.mostrarToastExito(this, "Pedido actualizado correctamente.");
             cargarTablaPedidos();
             seleccionarEnTabla(idPed);
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al actualizar pedido: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al actualizar pedido: " + ex.getMessage());
         }
     }
 
     private void eliminarPedido() {
         if (idPedidoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un pedido de la tabla.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un pedido de la tabla.");
             return;
         }
         if (esPedidoBloqueado()) {
-            JOptionPane.showMessageDialog(this, "No se puede eliminar un pedido que ya ha sido pagado o anulado.", "Operación Bloqueada", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Operación Bloqueada", "No se puede eliminar un pedido que ya ha sido pagado o anulado.");
             return;
         }
-        int confirmar = JOptionPane.showConfirmDialog(this, "¿Desea eliminar el pedido seleccionado y su detalle?",
-                "Confirmar", JOptionPane.YES_NO_OPTION);
-        if (confirmar == JOptionPane.YES_OPTION) {
+        boolean confirmar = FabricaDaisyUI.mostrarConfirmacion(this, "Confirmar Eliminación", "¿Desea eliminar el pedido seleccionado y su detalle?");
+        if (confirmar) {
             try {
                 int idPed = idPedidoSeleccionado;
                 detallePedidoService.eliminarPorPedido(idPed);
                 pedidoService.eliminar(idPed);
-                JOptionPane.showMessageDialog(this, "Pedido eliminado correctamente.");
+                FabricaDaisyUI.mostrarToastExito(this, "Pedido eliminado correctamente.");
                 cargarTablaPedidos();
                 limpiarFormulario();
             } catch (RuntimeException ex) {
-                JOptionPane.showMessageDialog(this, "Error al eliminar pedido: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                FabricaDaisyUI.mostrarError(this, "Error", "Error al eliminar pedido: " + ex.getMessage());
             }
         }
     }
 
     private void agregarDetalle() {
         if (idPedidoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Primero debe crear o seleccionar un pedido para agregar items.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Primero debe crear o seleccionar un pedido para agregar items.");
             return;
         }
         if (esPedidoBloqueado()) {
-            JOptionPane.showMessageDialog(this, "No se pueden agregar items a un pedido pagado o anulado.", "Operación Bloqueada", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Operación Bloqueada", "No se pueden agregar items a un pedido pagado o anulado.");
             return;
         }
         if (cmbItem.getSelectedIndex() == -1) {
-            JOptionPane.showMessageDialog(this, "Debe seleccionar un item para agregar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Debe seleccionar un item para agregar.");
             return;
         }
 
@@ -798,11 +841,11 @@ public class PedidoView extends JFrame {
         try {
             cantidad = new BigDecimal(txtCantidad.getText().trim());
             if (cantidad.compareTo(BigDecimal.ZERO) <= 0) {
-                JOptionPane.showMessageDialog(this, "La cantidad debe ser mayor que cero.", "Validación", JOptionPane.WARNING_MESSAGE);
+                FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "La cantidad debe ser mayor que cero.");
                 return;
             }
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "La cantidad debe ser un número válido.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "La cantidad debe ser un número válido.");
             return;
         }
 
@@ -822,6 +865,12 @@ public class PedidoView extends JFrame {
             puntosGenerados = 0;
         }
 
+        String errorStock = verificarDisponibilidadStock(idPedidoSeleccionado, tipoCodigo, idItem, cantidad);
+        if (errorStock != null) {
+            FabricaDaisyUI.mostrarAdvertencia(this, "Stock Insuficiente", "No se puede agregar el item al pedido:\n\n" + errorStock);
+            return;
+        }
+
         try {
             int idPed = idPedidoSeleccionado;
             DetallesPedido detalle = new DetallesPedido();
@@ -838,19 +887,20 @@ public class PedidoView extends JFrame {
             cargarDetalle(idPed);
             cargarTablaPedidos();
             seleccionarEnTabla(idPed);
+            FabricaDaisyUI.mostrarToastExito(this, "Item agregado al pedido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al agregar item: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al agregar item: " + ex.getMessage());
         }
     }
 
     private void quitarDetalle() {
         if (esPedidoBloqueado()) {
-            JOptionPane.showMessageDialog(this, "No se pueden quitar items de un pedido pagado o anulado.", "Operación Bloqueada", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Operación Bloqueada", "No se pueden quitar items de un pedido pagado o anulado.");
             return;
         }
         int fila = tablaDetalle.getSelectedRow();
         if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione una fila del detalle para quitar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione una fila del detalle para quitar.");
             return;
         }
         int idDet = (int) modeloDetalle.getValueAt(fila, 0);
@@ -861,8 +911,9 @@ public class PedidoView extends JFrame {
             cargarDetalle(idPed);
             cargarTablaPedidos();
             seleccionarEnTabla(idPed);
+            FabricaDaisyUI.mostrarToastExito(this, "Item quitado del pedido.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al quitar item: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al quitar item: " + ex.getMessage());
         }
     }
 
@@ -925,32 +976,44 @@ public class PedidoView extends JFrame {
 
     private void abrirCobro() {
         if (idPedidoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un pedido de la tabla para procesar su cobro.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un pedido de la tabla para procesar su cobro.");
             return;
         }
         Pedidos p = pedidoService.buscarPorId(idPedidoSeleccionado);
         if (p == null) {
-            JOptionPane.showMessageDialog(this, "El pedido no fue encontrado.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "El pedido no fue encontrado.");
             return;
         }
         if ("C".equalsIgnoreCase(p.getEstadoPed())) {
-            int resp = JOptionPane.showConfirmDialog(this, "El pedido ya se encuentra pagado / completado.\n¿Desea ver su factura?", "Pedido Pagado", JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE);
-            if (resp == JOptionPane.YES_OPTION) {
+            boolean ver = FabricaDaisyUI.mostrarConfirmacion(this, "Pedido Ya Pagado", "El pedido ya se encuentra pagado / completado.\n¿Desea ver su factura?");
+            if (ver) {
                 new FacturaView(this, idPedidoSeleccionado).setVisible(true);
             }
             return;
         }
         if (p.getTotalPed().compareTo(BigDecimal.ZERO) <= 0) {
-            JOptionPane.showMessageDialog(this, "No se puede cobrar un pedido con total Q0.00. Agregue items al pedido primero.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "No se puede cobrar un pedido con total Q0.00. Agregue items al pedido primero.");
             return;
         }
+
+        String errorStock = verificarDisponibilidadStock(idPedidoSeleccionado, null, 0, null);
+        if (errorStock != null) {
+            FabricaDaisyUI.mostrarAdvertencia(this, "Stock Insuficiente para Cobro", "No se puede proceder al cobro del pedido:\n\n" + errorStock);
+            return;
+        }
+
         PagoView ventana = new PagoView(this, p);
         ventana.setVisible(true);
     }
 
     private void verFactura() {
         if (idPedidoSeleccionado == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione un pedido de la tabla para ver su factura.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un pedido cobrado de la tabla para ver su factura.");
+            return;
+        }
+        Pedidos p = pedidoService.buscarPorId(idPedidoSeleccionado);
+        if (p == null || !"C".equalsIgnoreCase(p.getEstadoPed())) {
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "El pedido seleccionado no ha sido cobrado. Solo los pedidos pagados cuentan con factura.");
             return;
         }
         new FacturaView(this, idPedidoSeleccionado).setVisible(true);
@@ -981,5 +1044,132 @@ public class PedidoView extends JFrame {
             return "Anulado";
         }
         return "Pendiente";
+    }
+
+    private void actualizarIndicadorStock(String tipoCodigo, int idItem) {
+        try {
+            BigDecimal stock = calcularStockDisponibleItem(tipoCodigo, idItem);
+            if (stock.compareTo(BigDecimal.ZERO) <= 0) {
+                lblStockDisponible.setText("● Stock: AGOTADO (0 dispon.)");
+                lblStockDisponible.setForeground(new Color(239, 68, 68));
+            } else if (stock.compareTo(new BigDecimal(5)) <= 0) {
+                lblStockDisponible.setText("● Stock bajo: " + stock.intValue() + " dispon.");
+                lblStockDisponible.setForeground(new Color(245, 158, 11));
+            } else {
+                lblStockDisponible.setText("● Stock disponible: " + stock.intValue() + " unid.");
+                lblStockDisponible.setForeground(TemaGestor.esModoOscuro() ? new Color(80, 250, 123) : new Color(5, 150, 105));
+            }
+        } catch (Exception ex) {
+            lblStockDisponible.setText("Stock: -");
+        }
+    }
+
+    private BigDecimal calcularStockDisponibleItem(String tipoCodigo, int idItem) {
+        if (TIPO_PRODUCTO.equals(tipoCodigo)) {
+            Productos prod = productoService.buscarPorId(idItem);
+            return (prod != null && prod.getExistenciaPro() != null) ? prod.getExistenciaPro() : BigDecimal.ZERO;
+        } else if (TIPO_SANDWICH.equals(tipoCodigo)) {
+            List<DetalleSandwich> ingList = detalleSandwichService.listarPorSandwich(idItem);
+            if (ingList == null || ingList.isEmpty()) {
+                return BigDecimal.ZERO;
+            }
+            BigDecimal minPosible = null;
+            for (DetalleSandwich ing : ingList) {
+                Productos prod = productoService.buscarPorId(ing.getIdProDet());
+                BigDecimal exist = (prod != null && prod.getExistenciaPro() != null) ? prod.getExistenciaPro() : BigDecimal.ZERO;
+                BigDecimal cantIng = (ing.getCantidadDet() != null && ing.getCantidadDet().compareTo(BigDecimal.ZERO) > 0)
+                        ? ing.getCantidadDet() : BigDecimal.ONE;
+                BigDecimal posible = exist.divide(cantIng, 0, RoundingMode.FLOOR);
+                if (minPosible == null || posible.compareTo(minPosible) < 0) {
+                    minPosible = posible;
+                }
+            }
+            return minPosible != null ? minPosible : BigDecimal.ZERO;
+        } else if (TIPO_MENU.equals(tipoCodigo)) {
+            List<DetalleMenu> compList = detalleMenuService.listarPorMenu(idItem);
+            if (compList == null || compList.isEmpty()) {
+                return BigDecimal.ZERO;
+            }
+            BigDecimal minPosible = null;
+            for (DetalleMenu comp : compList) {
+                BigDecimal cantComp = (comp.getCantidadDet() != null && comp.getCantidadDet().compareTo(BigDecimal.ZERO) > 0)
+                        ? comp.getCantidadDet() : BigDecimal.ONE;
+                BigDecimal posible = BigDecimal.ZERO;
+                if ("P".equalsIgnoreCase(comp.getTipoItemDet())) {
+                    Productos prod = productoService.buscarPorId(comp.getIdItemDet());
+                    BigDecimal exist = (prod != null && prod.getExistenciaPro() != null) ? prod.getExistenciaPro() : BigDecimal.ZERO;
+                    posible = exist.divide(cantComp, 0, RoundingMode.FLOOR);
+                } else if ("S".equalsIgnoreCase(comp.getTipoItemDet())) {
+                    BigDecimal stockSan = calcularStockDisponibleItem(TIPO_SANDWICH, comp.getIdItemDet());
+                    posible = stockSan.divide(cantComp, 0, RoundingMode.FLOOR);
+                }
+                if (minPosible == null || posible.compareTo(minPosible) < 0) {
+                    minPosible = posible;
+                }
+            }
+            return minPosible != null ? minPosible : BigDecimal.ZERO;
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private void desglosarRequerimientosItem(Map<Integer, BigDecimal> acumulador, String tipo, int idItem, BigDecimal cantidad) {
+        if (TIPO_PRODUCTO.equals(tipo)) {
+            acumulador.put(idItem, acumulador.getOrDefault(idItem, BigDecimal.ZERO).add(cantidad));
+        } else if (TIPO_SANDWICH.equals(tipo)) {
+            List<DetalleSandwich> ingList = detalleSandwichService.listarPorSandwich(idItem);
+            if (ingList != null) {
+                for (DetalleSandwich ing : ingList) {
+                    BigDecimal requerido = (ing.getCantidadDet() != null ? ing.getCantidadDet() : BigDecimal.ONE).multiply(cantidad);
+                    acumulador.put(ing.getIdProDet(), acumulador.getOrDefault(ing.getIdProDet(), BigDecimal.ZERO).add(requerido));
+                }
+            }
+        } else if (TIPO_MENU.equals(tipo)) {
+            List<DetalleMenu> compList = detalleMenuService.listarPorMenu(idItem);
+            if (compList != null) {
+                for (DetalleMenu comp : compList) {
+                    BigDecimal cantComp = (comp.getCantidadDet() != null ? comp.getCantidadDet() : BigDecimal.ONE).multiply(cantidad);
+                    if ("P".equalsIgnoreCase(comp.getTipoItemDet())) {
+                        acumulador.put(comp.getIdItemDet(), acumulador.getOrDefault(comp.getIdItemDet(), BigDecimal.ZERO).add(cantComp));
+                    } else if ("S".equalsIgnoreCase(comp.getTipoItemDet())) {
+                        List<DetalleSandwich> ingSand = detalleSandwichService.listarPorSandwich(comp.getIdItemDet());
+                        if (ingSand != null) {
+                            for (DetalleSandwich ing : ingSand) {
+                                BigDecimal reqIng = (ing.getCantidadDet() != null ? ing.getCantidadDet() : BigDecimal.ONE).multiply(cantComp);
+                                acumulador.put(ing.getIdProDet(), acumulador.getOrDefault(ing.getIdProDet(), BigDecimal.ZERO).add(reqIng));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private String verificarDisponibilidadStock(int idPedido, String nuevoTipo, int nuevoIdItem, BigDecimal nuevaCant) {
+        Map<Integer, BigDecimal> requeridos = new HashMap<>();
+        List<DetallesPedido> detallesExistentes = detallePedidoService.listarPorPedido(idPedido);
+        if (detallesExistentes != null) {
+            for (DetallesPedido d : detallesExistentes) {
+                BigDecimal cant = d.getCantidadDet() != null ? d.getCantidadDet() : BigDecimal.ONE;
+                desglosarRequerimientosItem(requeridos, d.getTipoItemDet(), d.getIdItemDet(), cant);
+            }
+        }
+        if (nuevoTipo != null && nuevoIdItem > 0 && nuevaCant != null && nuevaCant.compareTo(BigDecimal.ZERO) > 0) {
+            desglosarRequerimientosItem(requeridos, nuevoTipo, nuevoIdItem, nuevaCant);
+        }
+
+        for (Map.Entry<Integer, BigDecimal> entrada : requeridos.entrySet()) {
+            int idPro = entrada.getKey();
+            BigDecimal req = entrada.getValue();
+            Productos prod = productoService.buscarPorId(idPro);
+            if (prod != null) {
+                BigDecimal exist = prod.getExistenciaPro() != null ? prod.getExistenciaPro() : BigDecimal.ZERO;
+                if (exist.compareTo(req) < 0) {
+                    return "Stock insuficiente de: " + prod.getNombrePro()
+                            + "\nExistencia actual: " + exist
+                            + "\nRequerido para el pedido: " + req;
+                }
+            }
+        }
+        return null;
     }
 }
