@@ -341,7 +341,7 @@ public class FabricaDaisyUI {
         aplicarBotonTurquesa(boton);
         boton.setPreferredSize(new Dimension(150, 38));
         boton.setIconTextGap(8);
-        boton.setToolTipText("Exportar datos a archivo CSV (Excel)");
+        boton.setToolTipText("Exportar a archivo Excel CSV");
         if (accion != null) {
             boton.addActionListener(accion);
         }
@@ -353,7 +353,7 @@ public class FabricaDaisyUI {
         boton.setPreferredSize(new Dimension(38, 38));
         boton.setMinimumSize(new Dimension(38, 38));
         boton.setMaximumSize(new Dimension(38, 38));
-        boton.setToolTipText("Exportar a archivo CSV (Excel)");
+        boton.setToolTipText("Exportar a archivo Excel CSV");
         if (accion != null) {
             boton.addActionListener(accion);
         }

@@ -22,6 +22,7 @@ import javax.swing.table.TableColumnModel;
 import javax.swing.text.AbstractDocument;
 import java.awt.*;
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,6 +40,7 @@ public class InventarioView extends JFrame {
     private final List<Integer> idsProductos = new ArrayList<>();
     private final List<Productos> listaProductosMemoria = new ArrayList<>();
     private final Map<Integer, String> mapaCategorias = new HashMap<>();
+    private boolean cargandoFiltros = false;
 
     private final JLabel lblDetalleCategoria = new JLabel("Categoría: -");
     private final JLabel lblDetallePrecio = new JLabel("Precio Unitario: -");
@@ -91,15 +93,17 @@ public class InventarioView extends JFrame {
     }
 
     public InventarioView(Window parent) {
-        super("Control y Abastecimiento de Inventario");
+        super("Inventario");
         this.parent = parent;
         this.productoService = new ProductoService();
         this.inventarioService = new InventarioMovimientosService();
         this.categoriaService = new CategoriaService();
 
         iniciarComponentes();
+        cargandoFiltros = true;
         cargarCategorias();
         cargarProductosEnCombo();
+        cargandoFiltros = false;
         cargarTablaProductos();
         cargarTablaMovimientos();
     }
@@ -126,12 +130,7 @@ public class InventarioView extends JFrame {
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblTitulo.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #0f172a; [dark]foreground: #f8f8f2");
 
-        JLabel lblSubtitulo = new JLabel("Monitoreo de existencias en tiempo real y reposición de almacén");
-        lblSubtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        lblSubtitulo.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #64748b; [dark]foreground: #94a3b8");
-
         panelTextoTitulo.add(lblTitulo);
-        panelTextoTitulo.add(lblSubtitulo);
         panelSuperior.add(panelTextoTitulo, BorderLayout.WEST);
 
         JPanel panelAccionesSup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
@@ -169,7 +168,7 @@ public class InventarioView extends JFrame {
         JPanel colIzquierda = new JPanel(new BorderLayout(0, 8));
         colIzquierda.setOpaque(false);
 
-        JLabel lblSelProd = new JLabel("Producto a abastecer (Seleccione de la lista o tabla):");
+        JLabel lblSelProd = new JLabel("Producto a abastecer:");
         lblSelProd.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblSelProd.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #334155; [dark]foreground: #e2e8f0");
 
@@ -217,7 +216,7 @@ public class InventarioView extends JFrame {
         JPanel colDerecha = new JPanel(new BorderLayout(0, 10));
         colDerecha.setOpaque(false);
 
-        JLabel lblCant = new JLabel("Cantidad a ingresar en almacén:");
+        JLabel lblCant = new JLabel("Cantidad a ingresar:");
         lblCant.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblCant.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #334155; [dark]foreground: #f8f8f2");
 
@@ -260,7 +259,7 @@ public class InventarioView extends JFrame {
         contenedor.add(colIzquierda);
         contenedor.add(colDerecha);
 
-        return FabricaDaisyUI.crearTarjetaSeccion("Abastecimiento Rápido de Stock (Entradas)", contenedor);
+        return FabricaDaisyUI.crearTarjetaSeccion("Entrada de productos", contenedor);
     }
 
     private JPanel crearPanelTabProductos() {
@@ -276,6 +275,22 @@ public class InventarioView extends JFrame {
 
         txtBuscar.setPreferredSize(new Dimension(240, 38));
         txtBuscar.addActionListener(e -> filtrarTablaProductos());
+        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filtrarTablaProductos();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filtrarTablaProductos();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filtrarTablaProductos();
+            }
+        });
 
         cmbFiltroCategoria.setPreferredSize(new Dimension(170, 38));
         FabricaDaisyUI.estilizarCampo(cmbFiltroCategoria);
@@ -286,8 +301,13 @@ public class InventarioView extends JFrame {
         cmbFiltroEstado.addActionListener(e -> filtrarTablaProductos());
 
         btnBuscar.setPreferredSize(new Dimension(100, 38));
+        FabricaDaisyUI.aplicarBotonPrimario(btnBuscar);
 
-        panelFiltros.add(new JLabel("Filtrar:"));
+        JLabel lblFiltrar = new JLabel("Filtrar:");
+        lblFiltrar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblFiltrar.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #334155; [dark]foreground: #f8f8f2");
+
+        panelFiltros.add(lblFiltrar);
         panelFiltros.add(txtBuscar);
         panelFiltros.add(cmbFiltroCategoria);
         panelFiltros.add(cmbFiltroEstado);
@@ -438,6 +458,8 @@ public class InventarioView extends JFrame {
     }
 
     private void cargarCategorias() {
+        boolean prev = cargandoFiltros;
+        cargandoFiltros = true;
         mapaCategorias.clear();
         cmbFiltroCategoria.removeAllItems();
         cmbFiltroCategoria.addItem("Todas las categorías");
@@ -448,6 +470,7 @@ public class InventarioView extends JFrame {
             }
         } catch (Exception ignored) {
         }
+        cargandoFiltros = prev;
     }
 
     private void cargarProductosEnCombo() {
@@ -568,15 +591,6 @@ public class InventarioView extends JFrame {
         try {
             inventarioService.abastecer(idPro, cantidad);
             FabricaDaisyUI.mostrarToastExito(this, "Stock abastecido con éxito (+ " + cantidad.stripTrailingZeros().toPlainString() + " unid.)");
-
-            JOptionPane.showMessageDialog(this,
-                    "<html><body style='width: 320px; font-family: Segoe UI, sans-serif;'>"
-                            + "Se han ingresado <b>" + cantidad.stripTrailingZeros().toPlainString() + " unidades</b> al inventario de:<br/>"
-                            + "<b>" + prod.getNombrePro() + "</b> con éxito.</body></html>",
-                    "Abastecimiento Registrado",
-                    JOptionPane.INFORMATION_MESSAGE,
-                    Icons.check(32));
-
             txtCantidadIngreso.setText("");
             cargarProductosEnCombo();
             seleccionarProductoPorId(idPro);
@@ -592,11 +606,28 @@ public class InventarioView extends JFrame {
     }
 
     private void cargarTablaProductos() {
+        try {
+            List<Productos> fresca = productoService.listar();
+            listaProductosMemoria.clear();
+            listaProductosMemoria.addAll(fresca);
+        } catch (Exception ignored) {
+        }
         filtrarTablaProductos();
     }
 
+    private String normalizarTexto(String texto) {
+        if (texto == null) {
+            return "";
+        }
+        String descompuesto = Normalizer.normalize(texto, Normalizer.Form.NFD);
+        return descompuesto.replaceAll("\\p{M}", "").toLowerCase().trim();
+    }
+
     private void filtrarTablaProductos() {
-        String criterio = txtBuscar.getText().trim().toLowerCase();
+        if (cargandoFiltros) {
+            return;
+        }
+        String criterio = normalizarTexto(txtBuscar.getText());
         String catFiltro = cmbFiltroCategoria.getSelectedItem() != null ? cmbFiltroCategoria.getSelectedItem().toString() : "Todas las categorías";
         int estadoIdx = cmbFiltroEstado.getSelectedIndex();
 
@@ -615,8 +646,11 @@ public class InventarioView extends JFrame {
             }
 
             boolean matchTexto = criterio.isEmpty()
-                    || (p.getNombrePro() != null && p.getNombrePro().toLowerCase().contains(criterio))
-                    || (p.getCodigoPro() != null && p.getCodigoPro().toLowerCase().contains(criterio));
+                    || normalizarTexto(p.getNombrePro()).contains(criterio)
+                    || normalizarTexto(p.getCodigoPro()).contains(criterio)
+                    || String.valueOf(p.getIdPro()).contains(criterio)
+                    || normalizarTexto(categoria).contains(criterio)
+                    || normalizarTexto(estadoStock).contains(criterio);
 
             boolean matchCat = catFiltro.startsWith("Todas") || categoria.equalsIgnoreCase(catFiltro);
 
@@ -655,13 +689,20 @@ public class InventarioView extends JFrame {
         }
 
         String tipoFiltro = cmbFiltroTipoMov.getSelectedItem() != null ? cmbFiltroTipoMov.getSelectedItem().toString() : "TODOS LOS MOVIMIENTOS";
+        String normFiltro = tipoFiltro.toUpperCase().trim();
 
         try {
             List<InventarioMovimientos> lista = inventarioService.listar();
             for (InventarioMovimientos m : lista) {
-                String tipo = m.getTipoMovimientoImo() != null ? m.getTipoMovimientoImo() : "";
-                if (!tipoFiltro.startsWith("TODOS") && !tipo.equalsIgnoreCase(tipoFiltro)) {
-                    continue;
+                String tipo = m.getTipoMovimientoImo() != null ? m.getTipoMovimientoImo().toUpperCase().trim() : "";
+                if (!normFiltro.startsWith("TODOS")) {
+                    if ("VENTA".equals(normFiltro)) {
+                        if (!"VENTA".equals(tipo)) {
+                            continue;
+                        }
+                    } else if (!tipo.contains(normFiltro)) {
+                        continue;
+                    }
                 }
                 String nomProd = nombreProductos.getOrDefault(m.getIdProImo(), "Producto #" + m.getIdProImo());
                 String fecha = m.getFechaImo() != null ? m.getFechaImo().format(formateadorFecha) : "";
@@ -671,7 +712,7 @@ public class InventarioView extends JFrame {
                         m.getIdProImo(),
                         nomProd,
                         m.getCantidadImo() != null ? m.getCantidadImo().stripTrailingZeros().toPlainString() : "0",
-                        tipo
+                        m.getTipoMovimientoImo() != null ? m.getTipoMovimientoImo() : ""
                 });
             }
         } catch (RuntimeException ex) {
@@ -684,8 +725,10 @@ public class InventarioView extends JFrame {
     }
 
     private void refrescarTodo() {
+        cargandoFiltros = true;
         cargarCategorias();
         cargarProductosEnCombo();
+        cargandoFiltros = false;
         cargarTablaProductos();
         cargarTablaMovimientos();
         FabricaDaisyUI.mostrarToastInfo(this, "Datos de inventario actualizados");

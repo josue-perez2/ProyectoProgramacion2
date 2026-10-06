@@ -30,7 +30,7 @@ public class ReportesDaoImpl implements ReportesDao {
                 "FROM PAGOS p " +
                 "JOIN PEDIDOS e ON e.ID_PED = p.ID_PED_PAG " +
                 "LEFT JOIN CLIENTES c ON c.ID_CLI = e.ID_CLI_PED " +
-                "WHERE p.ESTADO_PAGO_PAG = 'C' " +
+                "WHERE p.ESTADO_PAGO_PAG IN ('P', 'C') " +
                 "AND p.FECHA_PAG >= ? AND p.FECHA_PAG < ? + INTERVAL '1' DAY " +
                 "ORDER BY p.FECHA_PAG DESC, e.ID_PED DESC";
         try (Connection conn = conexion.conectar();
@@ -80,7 +80,7 @@ public class ReportesDaoImpl implements ReportesDao {
                 "LEFT JOIN PRODUCTOS pr ON dp.TIPO_ITEM_DET = 'P' AND pr.ID_PRO = dp.ID_ITEM_DET " +
                 "LEFT JOIN SANDWICH s ON dp.TIPO_ITEM_DET = 'S' AND s.ID_SAN = dp.ID_ITEM_DET " +
                 "LEFT JOIN MENUS m ON dp.TIPO_ITEM_DET = 'M' AND m.ID_MEN = dp.ID_ITEM_DET " +
-                "WHERE pag.ESTADO_PAGO_PAG = 'C' " +
+                "WHERE pag.ESTADO_PAGO_PAG IN ('P', 'C') " +
                 "AND pag.FECHA_PAG >= ? AND pag.FECHA_PAG < ? + INTERVAL '1' DAY " +
                 "GROUP BY dp.ID_ITEM_DET, dp.TIPO_ITEM_DET, pr.NOMBRE_PRO, s.NOMBRE_SAN, m.NOMBRE_MEN " +
                 "ORDER BY CANTIDAD_VENDIDA DESC, NOMBRE_ITEM";
@@ -197,7 +197,7 @@ public class ReportesDaoImpl implements ReportesDao {
                 "JOIN MENUS m ON m.ID_MEN = d.ID_ITEM_DET " +
                 "JOIN PEDIDOS p ON p.ID_PED = d.ID_PED_DET " +
                 "JOIN PAGOS pg ON pg.ID_PED_PAG = p.ID_PED " +
-                "WHERE d.TIPO_ITEM_DET = 'M' AND pg.ESTADO_PAGO_PAG = 'C' " +
+                "WHERE d.TIPO_ITEM_DET = 'M' AND pg.ESTADO_PAGO_PAG IN ('P', 'C') " +
                 "AND pg.FECHA_PAG >= ? AND pg.FECHA_PAG < ? + INTERVAL '1' DAY " +
                 "GROUP BY m.ID_MEN, m.CODIGO_MEN, m.NOMBRE_MEN " +
                 "ORDER BY TOTAL_GENERADO DESC";

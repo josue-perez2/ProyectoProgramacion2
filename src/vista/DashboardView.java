@@ -2,9 +2,10 @@ package vista;
 
 import model.Cliente;
 import model.Pedidos;
-import service.CanjesService;
+import model.Productos;
 import service.ClienteService;
 import service.PedidoService;
+import service.ProductoService;
 import util.FormatoTexto;
 import vista.util.FabricaDaisyUI;
 import vista.util.Icons;
@@ -16,21 +17,26 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import javax.swing.text.AbstractDocument;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class DashboardView extends JFrame {
 
     private final ClienteService clienteService;
     private final PedidoService pedidoService;
-    private final CanjesService canjesService;
+    private final ProductoService productoService;
 
     private final JLabel lblTotalClientes = new JLabel("0");
     private final JLabel lblTotalPedidos = new JLabel("0");
-    private final JLabel lblTotalPuntos = new JLabel("0");
-    private final JLabel lblTotalCanjes = new JLabel("0");
+    private final JLabel lblTotalIngresos = new JLabel("Q 0.00");
+    private final JLabel lblStockBajo = new JLabel("0");
 
     private final JComboBox<String> cmbTemas = new JComboBox<>(TemaGestor.obtenerNombresTemas());
     private final JTextField txtDpiBusqueda = FabricaDaisyUI.crearCampoTexto("DPI...", 16);
@@ -49,6 +55,13 @@ public class DashboardView extends JFrame {
     private final JButton btnCanjeConCliente = FabricaDaisyUI.crearBotonSecundario("Canjear Puntos", Icons.gift(16), e -> iniciarCanjeConClienteActual());
 
     private Cliente clienteConsultado = null;
+    private PedidoView ventanaPedido = null;
+    private CanjeView ventanaCanje = null;
+    private PagoView ventanaPago = null;
+    private ClienteView ventanaCliente = null;
+    private AdministracionView ventanaAdmin = null;
+    private InventarioView ventanaInventario = null;
+    private ReportesView ventanaReportes = null;
 
     private final DefaultTableModel modeloUltimosPedidos = new DefaultTableModel() {
         @Override
@@ -60,10 +73,10 @@ public class DashboardView extends JFrame {
     private final DateTimeFormatter formateadorFecha = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     public DashboardView() {
-        super("Pan, Puntos y Premios - Panel de Control");
+        super("Panel de Control");
         this.clienteService = new ClienteService();
         this.pedidoService = new PedidoService();
-        this.canjesService = new CanjesService();
+        this.productoService = new ProductoService();
 
         iniciarComponentes();
         cargarMetricas();
@@ -90,7 +103,7 @@ public class DashboardView extends JFrame {
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
         lblTitulo.putClientProperty("FlatLaf.style", "[light]foreground: #0f172a; [dark]foreground: #f8f8f2");
 
-        JLabel lblSubtitulo = new JLabel("Sistema de Gestión de Pedidos");
+        JLabel lblSubtitulo = new JLabel("Sistema de Gestión de Ventas");
         lblSubtitulo.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblSubtitulo.putClientProperty("FlatLaf.style", "[light]foreground: #64748b; [dark]foreground: #bd93f9");
 
@@ -134,10 +147,51 @@ public class DashboardView extends JFrame {
         panelMetricas.setBorder(new EmptyBorder(4, 24, 10, 24));
         panelMetricas.setOpaque(false);
 
-        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Clientes Registrados", lblTotalClientes, new Color(16, 185, 129), new Color(80, 250, 123)));
-        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Total de Pedidos", lblTotalPedidos, new Color(99, 102, 241), new Color(139, 233, 253)));
-        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Puntos en Circulación", lblTotalPuntos, new Color(217, 119, 6), new Color(241, 250, 140)));
-        panelMetricas.add(FabricaDaisyUI.crearTarjetaEstadistica("Premios Canjeados", lblTotalCanjes, new Color(236, 72, 153), new Color(255, 121, 198)));
+        JPanel cardClientes = FabricaDaisyUI.crearTarjetaEstadistica("Clientes Registrados", lblTotalClientes, new Color(59, 130, 246), new Color(139, 233, 253));
+        JPanel cardPedidos = FabricaDaisyUI.crearTarjetaEstadistica("Total de Pedidos", lblTotalPedidos, new Color(99, 102, 241), new Color(189, 147, 249));
+        JPanel cardIngresos = FabricaDaisyUI.crearTarjetaEstadistica("Ingresos Totales", lblTotalIngresos, new Color(16, 185, 129), new Color(80, 250, 123));
+        JPanel cardStockBajo = FabricaDaisyUI.crearTarjetaEstadistica("Stock Bajo", lblStockBajo, new Color(239, 68, 68), new Color(255, 110, 110));
+
+        cardClientes.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        cardClientes.setToolTipText("Abrir módulo de clientes");
+        cardClientes.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                abrirAdministracionCliente();
+            }
+        });
+
+        cardPedidos.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        cardPedidos.setToolTipText("Abrir módulo de pedidos");
+        cardPedidos.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                abrirPedido();
+            }
+        });
+
+        cardIngresos.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        cardIngresos.setToolTipText("Abrir módulo de reportes");
+        cardIngresos.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                abrirReportes();
+            }
+        });
+
+        cardStockBajo.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        cardStockBajo.setToolTipText("Abrir módulo de inventario");
+        cardStockBajo.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                abrirInventario();
+            }
+        });
+
+        panelMetricas.add(cardClientes);
+        panelMetricas.add(cardPedidos);
+        panelMetricas.add(cardIngresos);
+        panelMetricas.add(cardStockBajo);
 
         JPanel panelNorte = new JPanel(new BorderLayout());
         panelNorte.setOpaque(false);
@@ -157,7 +211,7 @@ public class DashboardView extends JFrame {
         JButton btnModuloCanje = FabricaDaisyUI.crearBotonSecundario("Canjear Puntos", Icons.gift(18), e -> abrirCanjes());
         JButton btnModuloPagos = FabricaDaisyUI.crearBotonAcento("Cobros y Pagos", Icons.creditCard(18), e -> abrirPagos());
         JButton btnModuloClientes = FabricaDaisyUI.crearBotonNeutral("Clientes", Icons.user(18), e -> abrirAdministracionCliente());
-        JButton btnModuloInventario = FabricaDaisyUI.crearBotonSecundario("Inventario", Icons.refreshCw(18), e -> abrirInventario());
+        JButton btnModuloInventario = FabricaDaisyUI.crearBotonSecundario("Inventario", Icons.boxes(18), e -> abrirInventario());
         JButton btnModuloReportes = FabricaDaisyUI.crearBotonAcento("Reportes", Icons.receipt(18), e -> abrirReportes());
         JButton btnModuloAdmin = FabricaDaisyUI.crearBotonNeutral("Administración General", Icons.utensils(18), e -> abrirAdministracion());
 
@@ -388,39 +442,55 @@ public class DashboardView extends JFrame {
         if (clienteConsultado == null) {
             return;
         }
-        PedidoView ventana = new PedidoView(this, clienteConsultado);
-        ventana.setVisible(true);
+        if (enfocarVentana(ventanaPedido)) {
+            return;
+        }
+        ventanaPedido = new PedidoView(this, clienteConsultado);
+        ventanaPedido.setVisible(true);
     }
 
     private void iniciarCanjeConClienteActual() {
         if (clienteConsultado == null) {
             return;
         }
-        CanjeView ventana = new CanjeView(this, clienteConsultado);
-        ventana.setVisible(true);
+        if (enfocarVentana(ventanaCanje)) {
+            return;
+        }
+        ventanaCanje = new CanjeView(this, clienteConsultado);
+        ventanaCanje.setVisible(true);
     }
 
     private void cargarMetricas() {
         try {
             List<Cliente> clientes = clienteService.listar();
             List<Pedidos> pedidos = pedidoService.listar();
-            int totalPuntos = 0;
-            for (Cliente c : clientes) {
-                if (c.getSaldoPuntoCli() != null) {
-                    totalPuntos += c.getSaldoPuntoCli().intValue();
+            BigDecimal totalIngresos = BigDecimal.ZERO;
+            for (Pedidos p : pedidos) {
+                if ("C".equalsIgnoreCase(p.getEstadoPed()) && p.getTotalPed() != null) {
+                    totalIngresos = totalIngresos.add(p.getTotalPed());
                 }
             }
-            int totalCanjes = canjesService.listar().size();
+            List<Productos> productos = productoService.listar();
+            int stockBajo = 0;
+            for (Productos prod : productos) {
+                if (prod.getActivoPro() == null || !"I".equalsIgnoreCase(prod.getActivoPro())) {
+                    BigDecimal exist = prod.getExistenciaPro() != null ? prod.getExistenciaPro() : BigDecimal.ZERO;
+                    if (exist.compareTo(new BigDecimal(15)) <= 0) {
+                        stockBajo++;
+                    }
+                }
+            }
 
             lblTotalClientes.setText(String.valueOf(clientes.size()));
             lblTotalPedidos.setText(String.valueOf(pedidos.size()));
-            lblTotalPuntos.setText(totalPuntos + " pts");
-            lblTotalCanjes.setText(String.valueOf(totalCanjes));
+            DecimalFormat df = new DecimalFormat("Q #,##0.00", new DecimalFormatSymbols(Locale.US));
+            lblTotalIngresos.setText(df.format(totalIngresos));
+            lblStockBajo.setText(String.valueOf(stockBajo));
         } catch (RuntimeException ex) {
             lblTotalClientes.setText("0");
             lblTotalPedidos.setText("0");
-            lblTotalPuntos.setText("0 pts");
-            lblTotalCanjes.setText("0");
+            lblTotalIngresos.setText("Q 0.00");
+            lblStockBajo.setText("0");
         }
     }
 
@@ -452,33 +522,71 @@ public class DashboardView extends JFrame {
         }
     }
 
+    private boolean enfocarVentana(JFrame ventana) {
+        if (ventana != null && ventana.isDisplayable()) {
+            if (ventana.getState() == Frame.ICONIFIED) {
+                ventana.setState(Frame.NORMAL);
+            }
+            ventana.toFront();
+            ventana.requestFocus();
+            return true;
+        }
+        return false;
+    }
+
     private void abrirPedido() {
-        PedidoView ventana = new PedidoView(this, clienteConsultado);
-        ventana.setVisible(true);
+        if (enfocarVentana(ventanaPedido)) {
+            return;
+        }
+        ventanaPedido = new PedidoView(this, clienteConsultado);
+        ventanaPedido.setVisible(true);
     }
 
     private void abrirCanjes() {
-        CanjeView ventana = new CanjeView(this, clienteConsultado);
-        ventana.setVisible(true);
+        if (enfocarVentana(ventanaCanje)) {
+            return;
+        }
+        ventanaCanje = new CanjeView(this, clienteConsultado);
+        ventanaCanje.setVisible(true);
     }
 
     private void abrirPagos() {
-        new PagoView(this).setVisible(true);
+        if (enfocarVentana(ventanaPago)) {
+            return;
+        }
+        ventanaPago = new PagoView(this);
+        ventanaPago.setVisible(true);
     }
 
     private void abrirAdministracionCliente() {
-        new ClienteView(this).setVisible(true);
+        if (enfocarVentana(ventanaCliente)) {
+            return;
+        }
+        ventanaCliente = new ClienteView(this);
+        ventanaCliente.setVisible(true);
     }
 
     private void abrirAdministracion() {
-        new AdministracionView(this).setVisible(true);
+        if (enfocarVentana(ventanaAdmin)) {
+            return;
+        }
+        ventanaAdmin = new AdministracionView(this);
+        ventanaAdmin.setVisible(true);
     }
 
     private void abrirInventario() {
-        new InventarioView(this).setVisible(true);
+        if (enfocarVentana(ventanaInventario)) {
+            return;
+        }
+        ventanaInventario = new InventarioView(this);
+        ventanaInventario.setVisible(true);
     }
 
     private void abrirReportes() {
-        new ReportesView(this).setVisible(true);
+        if (enfocarVentana(ventanaReportes)) {
+            return;
+        }
+        ventanaReportes = new ReportesView(this);
+        ventanaReportes.setVisible(true);
     }
 }
