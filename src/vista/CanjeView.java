@@ -8,6 +8,7 @@ import service.ClienteService;
 import service.RecompensaService;
 import util.FormatoTexto;
 import vista.util.FabricaDaisyUI;
+import vista.util.GestorVentanas;
 import vista.util.Icons;
 import vista.util.TemaGestor;
 
@@ -256,7 +257,7 @@ public class CanjeView extends JFrame {
                     "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al cliente ahora?"
             );
             if (opcion) {
-                new ClienteView(this, soloDigitos).setVisible(true);
+                GestorVentanas.abrirOEnfocar(ClienteView.class, () -> new ClienteView(this, soloDigitos));
             }
             return;
         }

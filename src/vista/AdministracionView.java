@@ -1,6 +1,7 @@
 package vista;
 
 import vista.util.FabricaDaisyUI;
+import vista.util.GestorVentanas;
 import vista.util.Icons;
 import vista.util.TemaGestor;
 
@@ -113,33 +114,27 @@ public class AdministracionView extends JFrame {
     }
 
     private void abrirCategoria() {
-        CategoriaView ventana = new CategoriaView(this);
-        ventana.setVisible(true);
+        GestorVentanas.abrirOEnfocar(CategoriaView.class, () -> new CategoriaView(this));
     }
 
     private void abrirProducto() {
-        ProductoView ventana = new ProductoView(this);
-        ventana.setVisible(true);
+        GestorVentanas.abrirOEnfocar(ProductoView.class, () -> new ProductoView(this));
     }
 
     private void abrirSandwich() {
-        SandwichView ventana = new SandwichView(this);
-        ventana.setVisible(true);
+        GestorVentanas.abrirOEnfocar(SandwichView.class, () -> new SandwichView(this));
     }
 
     private void abrirMenu() {
-        MenuView ventana = new MenuView(this);
-        ventana.setVisible(true);
+        GestorVentanas.abrirOEnfocar(MenuView.class, () -> new MenuView(this));
     }
 
     private void abrirReportes() {
-        ReportesView ventana = new ReportesView(this);
-        ventana.setVisible(true);
+        GestorVentanas.abrirOEnfocar(ReportesView.class, () -> new ReportesView(this));
     }
 
     private void abrirInventario() {
-        InventarioView ventana = new InventarioView(this);
-        ventana.setVisible(true);
+        GestorVentanas.abrirOEnfocar(InventarioView.class, () -> new InventarioView(this));
     }
 
     private void regresar() {

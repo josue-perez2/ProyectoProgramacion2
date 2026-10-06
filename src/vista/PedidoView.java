@@ -22,6 +22,7 @@ import service.SandwichService;
 import util.ExportadorCSV;
 import util.FormatoTexto;
 import vista.util.FabricaDaisyUI;
+import vista.util.GestorVentanas;
 import vista.util.Icons;
 import vista.util.TemaGestor;
 
@@ -485,7 +486,7 @@ public class PedidoView extends JFrame {
                     "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al cliente ahora?"
             );
             if (opcion) {
-                new ClienteView(this, soloDigitos).setVisible(true);
+                GestorVentanas.abrirOEnfocar(ClienteView.class, () -> new ClienteView(this, soloDigitos));
             }
             return;
         }
@@ -504,7 +505,7 @@ public class PedidoView extends JFrame {
 
     private void registrarNuevoCliente() {
         String textoDpi = FormatoTexto.soloDigitos(txtDpiCliente.getText().trim());
-        new ClienteView(this, textoDpi).setVisible(true);
+        GestorVentanas.abrirOEnfocar(ClienteView.class, () -> new ClienteView(this, textoDpi));
     }
 
     private void asignarClienteActual(Cliente c) {
@@ -1014,8 +1015,7 @@ public class PedidoView extends JFrame {
             return;
         }
 
-        PagoView ventana = new PagoView(this, p);
-        ventana.setVisible(true);
+        GestorVentanas.abrirOEnfocar(PagoView.class, () -> new PagoView(this, p));
     }
 
     private void verFactura() {

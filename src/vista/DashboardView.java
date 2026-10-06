@@ -8,6 +8,7 @@ import service.PedidoService;
 import service.ProductoService;
 import util.FormatoTexto;
 import vista.util.FabricaDaisyUI;
+import vista.util.GestorVentanas;
 import vista.util.Icons;
 import vista.util.TemaGestor;
 
@@ -358,7 +359,7 @@ public class DashboardView extends JFrame {
                     "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al nuevo cliente?"
             );
             if (opcion) {
-                new ClienteView(this, soloDigitos).setVisible(true);
+                GestorVentanas.abrirOEnfocar(ClienteView.class, () -> new ClienteView(this, soloDigitos));
             }
             limpiarBusquedaCliente();
             return;
@@ -442,22 +443,14 @@ public class DashboardView extends JFrame {
         if (clienteConsultado == null) {
             return;
         }
-        if (enfocarVentana(ventanaPedido)) {
-            return;
-        }
-        ventanaPedido = new PedidoView(this, clienteConsultado);
-        ventanaPedido.setVisible(true);
+        GestorVentanas.abrirOEnfocar(PedidoView.class, () -> new PedidoView(this, clienteConsultado));
     }
 
     private void iniciarCanjeConClienteActual() {
         if (clienteConsultado == null) {
             return;
         }
-        if (enfocarVentana(ventanaCanje)) {
-            return;
-        }
-        ventanaCanje = new CanjeView(this, clienteConsultado);
-        ventanaCanje.setVisible(true);
+        GestorVentanas.abrirOEnfocar(CanjeView.class, () -> new CanjeView(this, clienteConsultado));
     }
 
     private void cargarMetricas() {
@@ -535,58 +528,30 @@ public class DashboardView extends JFrame {
     }
 
     private void abrirPedido() {
-        if (enfocarVentana(ventanaPedido)) {
-            return;
-        }
-        ventanaPedido = new PedidoView(this, clienteConsultado);
-        ventanaPedido.setVisible(true);
+        GestorVentanas.abrirOEnfocar(PedidoView.class, () -> new PedidoView(this, clienteConsultado));
     }
 
     private void abrirCanjes() {
-        if (enfocarVentana(ventanaCanje)) {
-            return;
-        }
-        ventanaCanje = new CanjeView(this, clienteConsultado);
-        ventanaCanje.setVisible(true);
+        GestorVentanas.abrirOEnfocar(CanjeView.class, () -> new CanjeView(this, clienteConsultado));
     }
 
     private void abrirPagos() {
-        if (enfocarVentana(ventanaPago)) {
-            return;
-        }
-        ventanaPago = new PagoView(this);
-        ventanaPago.setVisible(true);
+        GestorVentanas.abrirOEnfocar(PagoView.class, () -> new PagoView(this));
     }
 
     private void abrirAdministracionCliente() {
-        if (enfocarVentana(ventanaCliente)) {
-            return;
-        }
-        ventanaCliente = new ClienteView(this);
-        ventanaCliente.setVisible(true);
+        GestorVentanas.abrirOEnfocar(ClienteView.class, () -> new ClienteView(this));
     }
 
     private void abrirAdministracion() {
-        if (enfocarVentana(ventanaAdmin)) {
-            return;
-        }
-        ventanaAdmin = new AdministracionView(this);
-        ventanaAdmin.setVisible(true);
+        GestorVentanas.abrirOEnfocar(AdministracionView.class, () -> new AdministracionView(this));
     }
 
     private void abrirInventario() {
-        if (enfocarVentana(ventanaInventario)) {
-            return;
-        }
-        ventanaInventario = new InventarioView(this);
-        ventanaInventario.setVisible(true);
+        GestorVentanas.abrirOEnfocar(InventarioView.class, () -> new InventarioView(this));
     }
 
     private void abrirReportes() {
-        if (enfocarVentana(ventanaReportes)) {
-            return;
-        }
-        ventanaReportes = new ReportesView(this);
-        ventanaReportes.setVisible(true);
+        GestorVentanas.abrirOEnfocar(ReportesView.class, () -> new ReportesView(this));
     }
 }
