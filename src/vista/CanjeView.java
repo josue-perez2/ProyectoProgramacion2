@@ -150,6 +150,7 @@ public class CanjeView extends JFrame {
         String[] columnas = {"ID", "Recompensa", "Tipo", "Puntos Requeridos", "Disponibilidad", "Estado de Canje"};
         modeloRecompensas.setColumnIdentifiers(columnas);
         tablaRecompensas.setModel(modeloRecompensas);
+        tablaRecompensas.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaRecompensas);
 
         TableColumnModel colModel = tablaRecompensas.getColumnModel();
@@ -244,29 +245,26 @@ public class CanjeView extends JFrame {
         String texto = txtDpiCliente.getText().trim();
         String soloDigitos = FormatoTexto.soloDigitos(texto);
         if (soloDigitos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Por favor ingrese el número de DPI del cliente.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Por favor ingrese el número de DPI del cliente.");
             return;
         }
         Cliente c = clienteService.buscarPorDpi(soloDigitos);
         if (c == null) {
-            int opcion = JOptionPane.showConfirmDialog(
+            boolean opcion = FabricaDaisyUI.mostrarConfirmacion(
                     this,
-                    "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al cliente ahora?",
                     "Cliente No Encontrado",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
+                    "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al cliente ahora?"
             );
-            if (opcion == JOptionPane.YES_OPTION) {
+            if (opcion) {
                 new ClienteView(this, soloDigitos).setVisible(true);
             }
             return;
         }
         if (!"A".equalsIgnoreCase(c.getEstadoCli())) {
-            JOptionPane.showMessageDialog(
+            FabricaDaisyUI.mostrarError(
                     this,
-                    "El cliente " + c.getNombreCli() + " se encuentra INACTIVO.\nNo es posible canjear puntos para clientes inactivos.",
                     "Cliente Inactivo",
-                    JOptionPane.ERROR_MESSAGE
+                    "El cliente " + c.getNombreCli() + " se encuentra INACTIVO.\nNo es posible canjear puntos para clientes inactivos."
             );
             asignarClienteActual(null);
             return;
@@ -351,8 +349,7 @@ public class CanjeView extends JFrame {
                 }
             }
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudieron cargar las recompensas: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error de Datos", "No se pudieron cargar las recompensas: " + ex.getMessage());
         }
     }
 
@@ -423,11 +420,11 @@ public class CanjeView extends JFrame {
     private void confirmarCanje() {
         int fila = tablaRecompensas.getSelectedRow();
         if (fila == -1) {
-            JOptionPane.showMessageDialog(this, "Seleccione una recompensa de la lista.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione una recompensa de la lista.");
             return;
         }
         if (clienteActual == null) {
-            JOptionPane.showMessageDialog(this, "Debe ingresar y buscar el DPI del cliente.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Debe ingresar y buscar el DPI del cliente.");
             return;
         }
 
@@ -436,20 +433,18 @@ public class CanjeView extends JFrame {
         int saldoActual = clienteActual.getSaldoPuntoCli() != null ? clienteActual.getSaldoPuntoCli().intValue() : 0;
         int costoPuntos = recompensa.getPuntosRequeridosRec();
 
-        int confirmacion = JOptionPane.showConfirmDialog(
+        boolean confirmacion = FabricaDaisyUI.mostrarConfirmacion(
                 this,
-                "¿Desea confirmar el canje de la siguiente recompensa?\n\n" +
-                        "Cliente: " + clienteActual.getNombreCli() + "\n" +
-                        "Recompensa: " + recompensa.getNombreRec() + "\n" +
-                        "Puntos a descontar: " + costoPuntos + " pts\n" +
-                        "Saldo actual: " + saldoActual + " pts\n" +
-                        "Saldo resultante: " + (saldoActual - costoPuntos) + " pts",
                 "Confirmación de Canje",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
+                "¿Desea confirmar el canje de la siguiente recompensa?\n\n" +
+                        "• Cliente: " + clienteActual.getNombreCli() + "\n" +
+                        "• Recompensa: " + recompensa.getNombreRec() + "\n" +
+                        "• Puntos a descontar: " + costoPuntos + " pts\n" +
+                        "• Saldo actual: " + saldoActual + " pts\n" +
+                        "• Saldo resultante: " + (saldoActual - costoPuntos) + " pts"
         );
 
-        if (confirmacion != JOptionPane.YES_OPTION) {
+        if (!confirmacion) {
             return;
         }
 
@@ -461,69 +456,21 @@ public class CanjeView extends JFrame {
                 asignarClienteActual(clienteActualizado);
             }
 
-            mostrarComprobanteCanje(canjeGenerado, recompensa, saldoActual, clienteActualizado != null ? clienteActualizado.getSaldoPuntoCli().intValue() : (saldoActual - costoPuntos));
+            FabricaDaisyUI.mostrarToastExito(this, "Canje procesado exitosamente (" + recompensa.getNombreRec() + ")");
+            int saldoNuevoCalculado = clienteActualizado != null ? clienteActualizado.getSaldoPuntoCli().intValue() : (saldoActual - costoPuntos);
+            ComprobanteCanjeView comp = new ComprobanteCanjeView(this, canjeGenerado, recompensa, clienteActualizado != null ? clienteActualizado : clienteActual, saldoActual, saldoNuevoCalculado);
+            comp.setVisible(true);
 
         } catch (IllegalStateException | IllegalArgumentException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo realizar el canje: " + ex.getMessage(), "Validación de Canje", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación de Canje", "No se pudo realizar el canje: " + ex.getMessage());
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al procesar el canje: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al procesar el canje: " + ex.getMessage());
         }
-    }
-
-    private void mostrarComprobanteCanje(Canjes canje, Recompensas recompensa, int saldoAnterior, int saldoNuevo) {
-        JDialog dialog = new JDialog(this, "Comprobante de Canje", true);
-        dialog.setSize(480, 560);
-        dialog.setLocationRelativeTo(this);
-        dialog.setLayout(new BorderLayout(10, 10));
-        dialog.getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
-
-        String fechaTexto = canje.getFechaCan() != null ? canje.getFechaCan().format(formateadorFecha) : LocalDateTime.now().format(formateadorFecha);
-        String dpiTexto = clienteActual.getDpiCli() != null ? FormatoTexto.formatearDpi(clienteActual.getDpiCli()) : "S/D";
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("=====================================================\n");
-        sb.append("              PAN, PUNTOS Y PREMIOS                  \n");
-        sb.append("         COMPROBANTE DE CANJE DE PUNTOS              \n");
-        sb.append("=====================================================\n\n");
-        sb.append(String.format(" No. Canje:       #CAN-%05d\n", canje.getIdCan()));
-        sb.append(String.format(" Fecha y Hora:    %s\n", fechaTexto));
-        sb.append(String.format(" Cliente:         %s\n", clienteActual.getNombreCli()));
-        sb.append(String.format(" DPI:             %s\n", dpiTexto));
-        sb.append("-----------------------------------------------------\n");
-        sb.append(String.format(" Recompensa:      %s\n", recompensa.getNombreRec()));
-        sb.append(String.format(" Puntos Canjeados: -%d pts\n", recompensa.getPuntosRequeridosRec()));
-        sb.append("-----------------------------------------------------\n");
-        sb.append(String.format(" Saldo Anterior:  %d pts\n", saldoAnterior));
-        sb.append(String.format(" Saldo Restante:  %d pts\n", saldoNuevo));
-        sb.append("-----------------------------------------------------\n");
-        sb.append("   ¡Felicidades por su recompensa!     \n");
-        sb.append("=====================================================\n");
-
-        JTextArea txtTicket = new JTextArea(sb.toString());
-        txtTicket.setEditable(false);
-        txtTicket.setFont(new Font("Consolas", Font.PLAIN, 13));
-        txtTicket.setBackground(TemaGestor.esModoOscuro() ? new Color(34, 37, 46) : new Color(255, 255, 255));
-        txtTicket.setForeground(TemaGestor.esModoOscuro() ? new Color(248, 250, 252) : new Color(15, 23, 42));
-        txtTicket.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-
-        JScrollPane scroll = new JScrollPane(txtTicket);
-        scroll.setBorder(BorderFactory.createEmptyBorder(14, 18, 6, 18));
-        dialog.add(scroll, BorderLayout.CENTER);
-
-        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        panelAcciones.setOpaque(false);
-
-        JButton btnAceptar = FabricaDaisyUI.crearBotonPrimario("Aceptar y Finalizar", Icons.check(16), e -> dialog.dispose());
-        btnAceptar.setPreferredSize(new Dimension(170, 36));
-        panelAcciones.add(btnAceptar);
-
-        dialog.add(panelAcciones, BorderLayout.SOUTH);
-        dialog.setVisible(true);
     }
 
     private void verHistorialCanjes() {
         JDialog dialog = new JDialog(this, "Historial de Canjes Realizados", true);
-        dialog.setSize(820, 520);
+        dialog.setSize(840, 520);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout(10, 10));
         dialog.getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
@@ -536,6 +483,7 @@ public class CanjeView extends JFrame {
         };
         modeloHistorial.setColumnIdentifiers(new String[]{"ID Canje", "Cliente", "Recompensa", "Puntos Canjeados", "Fecha y Hora"});
         JTable tablaHistorial = new JTable(modeloHistorial);
+        tablaHistorial.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaHistorial);
 
         TableColumnModel colModel = tablaHistorial.getColumnModel();
@@ -545,6 +493,15 @@ public class CanjeView extends JFrame {
         colModel.getColumn(2).setPreferredWidth(210);
         colModel.getColumn(3).setPreferredWidth(110);
         colModel.getColumn(4).setPreferredWidth(160);
+
+        tablaHistorial.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    abrirComprobanteDesdeHistorial(dialog, tablaHistorial, modeloHistorial);
+                }
+            }
+        });
 
         try {
             List<Canjes> canjes = canjesService.listar();
@@ -573,21 +530,42 @@ public class CanjeView extends JFrame {
                 });
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(dialog, "Error al cargar historial: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(dialog, "Error", "Error al cargar historial: " + ex.getMessage());
         }
 
         JScrollPane scroll = new JScrollPane(tablaHistorial);
         scroll.setBorder(BorderFactory.createEmptyBorder(12, 16, 6, 16));
         dialog.add(scroll, BorderLayout.CENTER);
 
-        JPanel panelSur = new JPanel(new FlowLayout(FlowLayout.RIGHT, 14, 10));
+        JPanel panelSur = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         panelSur.setOpaque(false);
+
+        JButton btnVerComprobante = FabricaDaisyUI.crearBotonPrimario("Ver Comprobante", Icons.receipt(16), e -> abrirComprobanteDesdeHistorial(dialog, tablaHistorial, modeloHistorial));
+        btnVerComprobante.setPreferredSize(new Dimension(170, 36));
+
         JButton btnCerrarHistorial = FabricaDaisyUI.crearBotonNeutral("Cerrar", Icons.x(16), e -> dialog.dispose());
-        btnCerrarHistorial.setPreferredSize(new Dimension(100, 34));
+        btnCerrarHistorial.setPreferredSize(new Dimension(100, 36));
+
+        panelSur.add(btnVerComprobante);
         panelSur.add(btnCerrarHistorial);
         dialog.add(panelSur, BorderLayout.SOUTH);
 
         dialog.setVisible(true);
+    }
+
+    private void abrirComprobanteDesdeHistorial(JDialog parent, JTable tabla, DefaultTableModel modelo) {
+        int fila = tabla.getSelectedRow();
+        if (fila == -1) {
+            JOptionPane.showMessageDialog(parent,
+                    "<html><body style='width: 280px; font-family: Segoe UI, sans-serif;'>Seleccione un canje de la lista para ver su comprobante.</body></html>",
+                    "Aviso",
+                    JOptionPane.WARNING_MESSAGE,
+                    Icons.triangleAlert(32));
+            return;
+        }
+        int filaMod = tabla.convertRowIndexToModel(fila);
+        int idCanje = (int) modelo.getValueAt(filaMod, 0);
+        new ComprobanteCanjeView(parent, idCanje).setVisible(true);
     }
 
     private void regresar() {
