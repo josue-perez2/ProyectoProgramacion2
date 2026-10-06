@@ -2,6 +2,7 @@ package vista;
 
 import model.reportes.HistorialCanjeDTO;
 import service.ReporteService;
+import util.ExportadorCSV;
 import vista.util.FabricaDaisyUI;
 import vista.util.TemaGestor;
 
@@ -25,6 +26,7 @@ public class HistorialCanjesDialog extends JDialog {
     private final JSpinner spFechaInicio = new JSpinner(new SpinnerDateModel());
     private final JSpinner spFechaFin = new JSpinner(new SpinnerDateModel());
     private final JButton btnGenerar = new JButton("Generar Reporte");
+    private final JButton btnExportar = FabricaDaisyUI.crearBotonExportarCsv(e -> exportarCsv());
     private final JButton btnCerrar = new JButton("Cerrar");
 
     private final JTable tabla = new JTable() {
@@ -83,6 +85,7 @@ public class HistorialCanjesDialog extends JDialog {
         panelFiltros.add(FabricaDaisyUI.crearCampoConEtiqueta("Fecha Fin:", spFechaFin));
 
         btnGenerar.setPreferredSize(new Dimension(160, 38));
+        btnExportar.setPreferredSize(new Dimension(150, 38));
         btnCerrar.setPreferredSize(new Dimension(120, 38));
         FabricaDaisyUI.aplicarBotonPrimario(btnGenerar);
         FabricaDaisyUI.aplicarBotonNeutral(btnCerrar);
@@ -92,6 +95,7 @@ public class HistorialCanjesDialog extends JDialog {
         JPanel panelBotonesFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 6));
         panelBotonesFiltros.setOpaque(false);
         panelBotonesFiltros.add(btnGenerar);
+        panelBotonesFiltros.add(btnExportar);
         panelBotonesFiltros.add(btnCerrar);
 
         JPanel panelCabecera = new JPanel(new BorderLayout(10, 4));
@@ -105,6 +109,7 @@ public class HistorialCanjesDialog extends JDialog {
         String[] columnas = {"ID Canje", "Fecha", "Cliente", "Recompensa", "Puntos Utilizados"};
         modeloTabla.setColumnIdentifiers(columnas);
         tabla.setModel(modeloTabla);
+        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         TableColumnModel colModel = tabla.getColumnModel();
         colModel.getColumn(0).setPreferredWidth(90);
@@ -125,11 +130,11 @@ public class HistorialCanjesDialog extends JDialog {
         Date fechaIniD = (Date) spFechaInicio.getValue();
         Date fechaFinD = (Date) spFechaFin.getValue();
         if (fechaIniD == null || fechaFinD == null) {
-            JOptionPane.showMessageDialog(this, "Seleccione ambas fechas.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "Seleccione ambas fechas.");
             return;
         }
         if (fechaFinD.before(fechaIniD)) {
-            JOptionPane.showMessageDialog(this, "La fecha fin no puede ser anterior a la fecha inicio.", "Validación", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "La fecha fin no puede ser anterior a la fecha inicio.");
             return;
         }
         LocalDateTime ini = fechaIniD.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime().withHour(0).withMinute(0).withSecond(0).withNano(0);
@@ -146,8 +151,13 @@ public class HistorialCanjesDialog extends JDialog {
                         h.getPuntosUtilizados()
                 });
             }
+            FabricaDaisyUI.mostrarToastExito(this, "Reporte generado: " + lista.size() + " canjes.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al generar reporte: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al generar reporte: " + ex.getMessage());
         }
+    }
+
+    private void exportarCsv() {
+        ExportadorCSV.exportarTabla(this, tabla, "Reporte_Historial_Canjes");
     }
 }

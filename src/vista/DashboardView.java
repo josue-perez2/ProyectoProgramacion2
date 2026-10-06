@@ -102,17 +102,19 @@ public class DashboardView extends JFrame {
 
         JLabel lblTemaEti = new JLabel("Tema:");
         lblTemaEti.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblTemaEti.putClientProperty("FlatLaf.style", "[light]foreground: #334155; [dark]foreground: #f8f8f2");
         cmbTemas.setSelectedItem(TemaGestor.getTemaActual());
-        cmbTemas.setPreferredSize(new Dimension(160, 34));
+        cmbTemas.setPreferredSize(new Dimension(160, 38));
         FabricaDaisyUI.estilizarCampo(cmbTemas);
         cmbTemas.addActionListener(e -> {
             String seleccionado = (String) cmbTemas.getSelectedItem();
             if (seleccionado != null && !seleccionado.equals(TemaGestor.getTemaActual())) {
                 TemaGestor.aplicarTema(seleccionado);
+                mostrarFichaCliente(clienteConsultado);
             }
         });
 
-        JButton btnActualizarTodo = FabricaDaisyUI.crearBotonRefrescar(e -> {
+        JButton btnActualizarTodo = FabricaDaisyUI.crearBotonRefrescarIcono(e -> {
             cargarMetricas();
             cargarUltimosPedidos();
             if (clienteConsultado != null) {
@@ -147,49 +149,70 @@ public class DashboardView extends JFrame {
         panelCentro.setBorder(new EmptyBorder(2, 24, 6, 24));
         panelCentro.setOpaque(false);
 
-        JPanel panelModulosAcciones = new JPanel(new BorderLayout(0, 10));
-        panelModulosAcciones.setOpaque(false);
-
-        JPanel panelGrid4 = new JPanel(new GridLayout(2, 2, 10, 10));
-        panelGrid4.setOpaque(false);
+        JPanel panelGrid6 = new JPanel(new GridLayout(2, 3, 10, 10));
+        panelGrid6.setOpaque(false);
+        panelGrid6.setPreferredSize(new Dimension(0, 110));
 
         JButton btnModuloPedido = FabricaDaisyUI.crearBotonPrimario("Nuevo Pedido", Icons.shoppingBag(18), e -> abrirPedido());
         JButton btnModuloCanje = FabricaDaisyUI.crearBotonSecundario("Canjear Puntos", Icons.gift(18), e -> abrirCanjes());
         JButton btnModuloPagos = FabricaDaisyUI.crearBotonAcento("Cobros y Pagos", Icons.creditCard(18), e -> abrirPagos());
         JButton btnModuloClientes = FabricaDaisyUI.crearBotonNeutral("Clientes", Icons.user(18), e -> abrirAdministracionCliente());
+        JButton btnModuloInventario = FabricaDaisyUI.crearBotonSecundario("Inventario", Icons.refreshCw(18), e -> abrirInventario());
+        JButton btnModuloReportes = FabricaDaisyUI.crearBotonAcento("Reportes", Icons.receipt(18), e -> abrirReportes());
         JButton btnModuloAdmin = FabricaDaisyUI.crearBotonNeutral("Administración General", Icons.utensils(18), e -> abrirAdministracion());
+
+        btnModuloPedido.putClientProperty("Boton.radio", 999);
+        btnModuloCanje.putClientProperty("Boton.radio", 999);
+        btnModuloPagos.putClientProperty("Boton.radio", 999);
+        btnModuloClientes.putClientProperty("Boton.radio", 999);
+        btnModuloInventario.putClientProperty("Boton.radio", 999);
+        btnModuloReportes.putClientProperty("Boton.radio", 999);
+        btnModuloAdmin.putClientProperty("Boton.radio", 999);
+        btnPedidoConCliente.putClientProperty("Boton.radio", 999);
+        btnCanjeConCliente.putClientProperty("Boton.radio", 999);
 
         btnModuloPedido.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnModuloCanje.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnModuloPagos.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnModuloClientes.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnModuloInventario.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnModuloReportes.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnModuloAdmin.setFont(new Font("Segoe UI", Font.BOLD, 13));
 
-        btnModuloPedido.setPreferredSize(new Dimension(170, 42));
-        btnModuloCanje.setPreferredSize(new Dimension(170, 42));
-        btnModuloPagos.setPreferredSize(new Dimension(170, 42));
-        btnModuloClientes.setPreferredSize(new Dimension(170, 42));
-        btnModuloAdmin.setPreferredSize(new Dimension(360, 40));
+        btnModuloAdmin.setPreferredSize(new Dimension(0, 38));
 
-        panelGrid4.add(btnModuloPedido);
-        panelGrid4.add(btnModuloCanje);
-        panelGrid4.add(btnModuloPagos);
-        panelGrid4.add(btnModuloClientes);
+        panelGrid6.add(btnModuloPedido);
+        panelGrid6.add(btnModuloCanje);
+        panelGrid6.add(btnModuloPagos);
+        panelGrid6.add(btnModuloClientes);
+        panelGrid6.add(btnModuloInventario);
+        panelGrid6.add(btnModuloReportes);
 
-        panelModulosAcciones.add(panelGrid4, BorderLayout.CENTER);
-        panelModulosAcciones.add(btnModuloAdmin, BorderLayout.SOUTH);
+        JPanel panelContenedorBotones = new JPanel(new BorderLayout(0, 10));
+        panelContenedorBotones.setOpaque(false);
+        panelContenedorBotones.add(panelGrid6, BorderLayout.CENTER);
+        panelContenedorBotones.add(btnModuloAdmin, BorderLayout.SOUTH);
+
+        JPanel panelModulosAcciones = new JPanel(new GridBagLayout());
+        panelModulosAcciones.setOpaque(false);
+        GridBagConstraints gbcMod = new GridBagConstraints();
+        gbcMod.gridx = 0;
+        gbcMod.gridy = 0;
+        gbcMod.weightx = 1.0;
+        gbcMod.weighty = 0.0;
+        gbcMod.fill = GridBagConstraints.HORIZONTAL;
+        gbcMod.anchor = GridBagConstraints.NORTH;
+        panelModulosAcciones.add(panelContenedorBotones, gbcMod);
 
         JPanel tarjetaModulos = FabricaDaisyUI.crearTarjetaSeccion("Módulos Principales", panelModulosAcciones);
         panelCentro.add(tarjetaModulos);
-
-        JPanel panelConsultaCliente = new JPanel(new BorderLayout(10, 10));
-        panelConsultaCliente.setOpaque(false);
 
         JPanel panelBarraDpi = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
         panelBarraDpi.setOpaque(false);
 
         JLabel lblDpiEti = new JLabel("DPI:");
         lblDpiEti.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblDpiEti.putClientProperty("FlatLaf.style", "[light]foreground: #334155; [dark]foreground: #f8f8f2");
         ((AbstractDocument) txtDpiBusqueda.getDocument()).setDocumentFilter(FormatoTexto.filtroDpi());
         txtDpiBusqueda.setPreferredSize(new Dimension(170, 36));
         txtDpiBusqueda.addActionListener(e -> buscarClienteRapido());
@@ -208,8 +231,21 @@ public class DashboardView extends JFrame {
                 BorderFactory.createEmptyBorder(10, 8, 8, 8)
         ));
 
-        panelConsultaCliente.add(panelBarraDpi, BorderLayout.NORTH);
-        panelConsultaCliente.add(panelContenidoFicha, BorderLayout.CENTER);
+        JPanel panelContenedorCliente = new JPanel(new BorderLayout(0, 10));
+        panelContenedorCliente.setOpaque(false);
+        panelContenedorCliente.add(panelBarraDpi, BorderLayout.NORTH);
+        panelContenedorCliente.add(panelContenidoFicha, BorderLayout.CENTER);
+
+        JPanel panelConsultaCliente = new JPanel(new GridBagLayout());
+        panelConsultaCliente.setOpaque(false);
+        GridBagConstraints gbcCli = new GridBagConstraints();
+        gbcCli.gridx = 0;
+        gbcCli.gridy = 0;
+        gbcCli.weightx = 1.0;
+        gbcCli.weighty = 0.0;
+        gbcCli.fill = GridBagConstraints.HORIZONTAL;
+        gbcCli.anchor = GridBagConstraints.NORTH;
+        panelConsultaCliente.add(panelContenedorCliente, gbcCli);
 
         JPanel tarjetaConsultaCliente = FabricaDaisyUI.crearTarjetaSeccion("Búsqueda de Cliente", panelConsultaCliente);
         panelCentro.add(tarjetaConsultaCliente);
@@ -223,6 +259,7 @@ public class DashboardView extends JFrame {
         String[] columnasPedidos = {"No. Pedido", "Cliente", "Total", "Puntos", "Estado", "Fecha"};
         modeloUltimosPedidos.setColumnIdentifiers(columnasPedidos);
         tablaUltimosPedidos.setModel(modeloUltimosPedidos);
+        tablaUltimosPedidos.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaUltimosPedidos);
 
         TableColumnModel colModel = tablaUltimosPedidos.getColumnModel();
@@ -235,7 +272,7 @@ public class DashboardView extends JFrame {
         colModel.getColumn(5).setPreferredWidth(150);
 
         JScrollPane scrollUltimos = new JScrollPane(tablaUltimosPedidos);
-        scrollUltimos.setPreferredSize(new Dimension(1160, 130));
+        scrollUltimos.setPreferredSize(new Dimension(800, 160));
         scrollUltimos.setBorder(BorderFactory.createEmptyBorder());
 
         JPanel tarjetaUltimos = FabricaDaisyUI.crearTarjetaSeccion("Últimos Pedidos", scrollUltimos);
@@ -244,6 +281,7 @@ public class DashboardView extends JFrame {
         JPanel panelPie = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 6));
         panelPie.setOpaque(false);
         JButton btnSalir = FabricaDaisyUI.crearBotonPeligro("Salir", Icons.logOut(16), e -> System.exit(0));
+        btnSalir.putClientProperty("Boton.radio", 999);
         btnSalir.setPreferredSize(new Dimension(190, 36));
         panelPie.add(btnSalir);
         panelSur.add(panelPie, BorderLayout.SOUTH);
@@ -255,19 +293,17 @@ public class DashboardView extends JFrame {
         String texto = txtDpiBusqueda.getText().trim();
         String soloDigitos = FormatoTexto.soloDigitos(texto);
         if (soloDigitos.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Por favor ingrese el número de DPI a consultar.", "Aviso", JOptionPane.WARNING_MESSAGE);
+            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Por favor ingrese el número de DPI a consultar.");
             return;
         }
         Cliente c = clienteService.buscarPorDpi(soloDigitos);
         if (c == null) {
-            int opcion = JOptionPane.showConfirmDialog(
+            boolean opcion = FabricaDaisyUI.mostrarConfirmacion(
                     this,
-                    "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al nuevo cliente?",
                     "Cliente No Encontrado",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
+                    "No se encontró ningún cliente con DPI: " + FormatoTexto.formatearDpi(soloDigitos) + "\n\n¿Desea registrar al nuevo cliente?"
             );
-            if (opcion == JOptionPane.YES_OPTION) {
+            if (opcion) {
                 new ClienteView(this, soloDigitos).setVisible(true);
             }
             limpiarBusquedaCliente();
@@ -292,8 +328,13 @@ public class DashboardView extends JFrame {
         JPanel panelDatos = new JPanel(new GridLayout(3, 2, 12, 6));
         panelDatos.setOpaque(false);
 
+        boolean oscuro = TemaGestor.esModoOscuro();
+        Color fgPrincipal = oscuro ? new Color(248, 248, 242) : new Color(15, 23, 42);
+        Color fgSecundario = oscuro ? new Color(203, 213, 225) : new Color(71, 85, 105);
+
         lblNombreClienteFicha.setText(c.getNombreCli());
         lblNombreClienteFicha.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblNombreClienteFicha.setForeground(fgPrincipal);
 
         boolean activo = "A".equalsIgnoreCase(c.getEstadoCli());
         lblEstadoClienteFicha.setText(activo ? "CLIENTE ACTIVO" : "CLIENTE INACTIVO");
@@ -306,8 +347,13 @@ public class DashboardView extends JFrame {
         lblSaldoPuntosFicha.setForeground(new Color(16, 185, 129));
 
         lblDpiClienteFicha.setText("DPI: " + (c.getDpiCli() != null ? FormatoTexto.formatearDpi(c.getDpiCli()) : "S/D"));
+        lblDpiClienteFicha.setForeground(fgSecundario);
+
         lblTelefonoClienteFicha.setText("Tel: " + (c.getTelefonoCli() != null && !c.getTelefonoCli().trim().isEmpty() ? c.getTelefonoCli() : "S/T"));
+        lblTelefonoClienteFicha.setForeground(fgSecundario);
+
         lblCorreoClienteFicha.setText("Correo: " + (c.getCorreoCli() != null ? c.getCorreoCli() : "-"));
+        lblCorreoClienteFicha.setForeground(fgSecundario);
 
         panelDatos.add(lblNombreClienteFicha);
         panelDatos.add(lblSaldoPuntosFicha);
@@ -426,5 +472,13 @@ public class DashboardView extends JFrame {
 
     private void abrirAdministracion() {
         new AdministracionView(this).setVisible(true);
+    }
+
+    private void abrirInventario() {
+        new InventarioView(this).setVisible(true);
+    }
+
+    private void abrirReportes() {
+        new ReportesView(this).setVisible(true);
     }
 }

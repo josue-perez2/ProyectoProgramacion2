@@ -2,6 +2,7 @@ package vista;
 
 import model.reportes.PuntosClienteDTO;
 import service.ReporteService;
+import util.ExportadorCSV;
 import vista.util.FabricaDaisyUI;
 import vista.util.TemaGestor;
 
@@ -18,6 +19,7 @@ public class PuntosPorClienteDialog extends JDialog {
     private final ReporteService reporteService;
 
     private final JButton btnGenerar = new JButton("Generar Reporte");
+    private final JButton btnExportar = FabricaDaisyUI.crearBotonExportarCsv(e -> exportarCsv());
     private final JButton btnCerrar = new JButton("Cerrar");
 
     private final JTable tabla = new JTable() {
@@ -62,6 +64,7 @@ public class PuntosPorClienteDialog extends JDialog {
         panelContenedor.setOpaque(false);
 
         btnGenerar.setPreferredSize(new Dimension(160, 38));
+        btnExportar.setPreferredSize(new Dimension(150, 38));
         btnCerrar.setPreferredSize(new Dimension(120, 38));
         FabricaDaisyUI.aplicarBotonPrimario(btnGenerar);
         FabricaDaisyUI.aplicarBotonNeutral(btnCerrar);
@@ -71,6 +74,7 @@ public class PuntosPorClienteDialog extends JDialog {
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 6));
         panelBotones.setOpaque(false);
         panelBotones.add(btnGenerar);
+        panelBotones.add(btnExportar);
         panelBotones.add(btnCerrar);
 
         JPanel tarjetaFiltros = FabricaDaisyUI.crearTarjetaSeccion("", panelBotones);
@@ -79,6 +83,7 @@ public class PuntosPorClienteDialog extends JDialog {
         String[] columnas = {"ID Cliente", "Nombre", "DPI", "Saldo de Puntos"};
         modeloTabla.setColumnIdentifiers(columnas);
         tabla.setModel(modeloTabla);
+        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         TableColumnModel colModel = tabla.getColumnModel();
         colModel.getColumn(0).setPreferredWidth(100);
@@ -106,8 +111,13 @@ public class PuntosPorClienteDialog extends JDialog {
                         c.getSaldoPuntoCli()
                 });
             }
+            FabricaDaisyUI.mostrarToastExito(this, "Reporte generado: " + lista.size() + " clientes.");
         } catch (RuntimeException ex) {
-            JOptionPane.showMessageDialog(this, "Error al generar reporte: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            FabricaDaisyUI.mostrarError(this, "Error", "Error al generar reporte: " + ex.getMessage());
         }
+    }
+
+    private void exportarCsv() {
+        ExportadorCSV.exportarTabla(this, tabla, "Reporte_Puntos_Por_Cliente");
     }
 }
