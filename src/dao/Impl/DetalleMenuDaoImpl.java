@@ -9,13 +9,40 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DetalleMenuDaoImpl implements DetalleMenuDao {
     private final Conexion conexion;
 
-    public  DetalleMenuDaoImpl() {
+    static {
+        asegurarMenusBase();
+    }
+
+    private static void asegurarMenusBase() {
+        Conexion con = new Conexion();
+        try (Connection conn = con.conectar();
+             Statement st = conn.createStatement()) {
+            int conteo = 0;
+            try (ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM DETALLE_MENU")) {
+                if (rs.next()) {
+                    conteo = rs.getInt(1);
+                }
+            }
+            if (conteo == 0) {
+                st.executeUpdate("INSERT INTO DETALLE_MENU (ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET) VALUES (1, 'S', 1, 1)");
+                st.executeUpdate("INSERT INTO DETALLE_MENU (ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET) VALUES (1, 'P', 1, 1)");
+                st.executeUpdate("INSERT INTO DETALLE_MENU (ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET) VALUES (1, 'P', 6, 1)");
+                st.executeUpdate("INSERT INTO DETALLE_MENU (ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET) VALUES (2, 'S', 2, 1)");
+                st.executeUpdate("INSERT INTO DETALLE_MENU (ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET) VALUES (2, 'P', 2, 1)");
+                st.executeUpdate("INSERT INTO DETALLE_MENU (ID_MEN_DET, TIPO_ITEM_DET, ID_ITEM_DET, CANTIDAD_DET) VALUES (2, 'P', 5, 1)");
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    public DetalleMenuDaoImpl() {
         this.conexion = new Conexion();
     }
     @Override

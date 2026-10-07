@@ -7,27 +7,34 @@ import dao.DetalleSandwichDao;
 import dao.DetallesPedidoDao;
 import dao.HistorialPuntosDao;
 import dao.InventarioMovimientosDao;
+import dao.MenusDao;
 import dao.PagosDao;
 import dao.PedidosDao;
 import dao.ProductosDao;
+import dao.SandwichDao;
 import dao.Impl.ClienteDaoImpl;
 import dao.Impl.DetalleMenuDaoImpl;
 import dao.Impl.DetalleSandwichDaoImpl;
 import dao.Impl.DetallePedidoDaoImpl;
 import dao.Impl.HistorialPuntosDaoImpl;
 import dao.Impl.InventarioMovimientosDaoImpl;
+import dao.Impl.MenusDaoImpl;
 import dao.Impl.PagosDaoImpl;
 import dao.Impl.PedidosDaoImpl;
 import dao.Impl.ProductosDaoImpl;
+import dao.Impl.SandwichDaoImpl;
 import model.Cliente;
 import model.DetalleMenu;
 import model.DetalleSandwich;
 import model.DetallesPedido;
 import model.HistorialPuntos;
 import model.InventarioMovimientos;
+import model.Menus;
 import model.Pagos;
+import model.pagos.Pago;
 import model.Pedidos;
 import model.Productos;
+import model.Sandwich;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -46,6 +53,8 @@ public class PagoService {
     private final DetalleSandwichDao detalleSandwichDao;
     private final ProductosDao productosDao;
     private final InventarioMovimientosDao inventarioMovimientosDao;
+    private final SandwichDao sandwichDao;
+    private final MenusDao menusDao;
 
     public PagoService() {
         this.pagosDao = new PagosDaoImpl();
@@ -57,6 +66,8 @@ public class PagoService {
         this.detalleSandwichDao = new DetalleSandwichDaoImpl();
         this.productosDao = new ProductosDaoImpl();
         this.inventarioMovimientosDao = new InventarioMovimientosDaoImpl();
+        this.sandwichDao = new SandwichDaoImpl();
+        this.menusDao = new MenusDaoImpl();
     }
 
     public List<Pagos> listar() {
@@ -197,6 +208,18 @@ public class PagoService {
         }
     }
 
+    public void procesarPago(Pago pago, Pedidos pedido, Cliente cliente) {
+        if (pago == null) {
+            throw new IllegalArgumentException("El objeto de pago no puede ser nulo.");
+        }
+        if (!pago.procesar()) {
+            throw new IllegalStateException("El procesamiento del pago no fue exitoso.");
+        }
+        Pagos modeloPagos = pago.aModeloGenerico();
+        procesarPago(modeloPagos, pedido, cliente);
+        pago.setIdPago(modeloPagos.getIdPad());
+    }
+
     private void validarStockPedido(int idPedido) {
         List<DetallesPedido> detalles = detallesPedidoDao.listarPorPedido(idPedido);
         for (DetallesPedido d : detalles) {
@@ -267,24 +290,31 @@ public class PagoService {
             BigDecimal cant = d.getCantidadDet() != null ? d.getCantidadDet() : BigDecimal.ONE;
 
             if ("P".equalsIgnoreCase(tipo)) {
-                aplicarSalidaStock(idItem, cant);
+                Productos prod = productosDao.buscarPorId(idItem);
+                String nomProd = prod != null ? prod.getNombrePro() : "Producto #" + idItem;
+                String motivo = "VENTA PEDIDO #" + idPedido + " [" + nomProd + "]";
+                aplicarSalidaStock(idItem, cant, motivo);
             } else if ("S".equalsIgnoreCase(tipo)) {
+                String nomSan = obtenerNombreSandwich(idItem);
+                String motivo = "VENTA PEDIDO #" + idPedido + " [" + nomSan + "]";
                 List<DetalleSandwich> ingList = detalleSandwichDao.listarPorSandwich(idItem);
                 for (DetalleSandwich ing : ingList) {
                     BigDecimal requerido = ing.getCantidadDet().multiply(cant);
-                    aplicarSalidaStock(ing.getIdProDet(), requerido);
+                    aplicarSalidaStock(ing.getIdProDet(), requerido, motivo);
                 }
             } else if ("M".equalsIgnoreCase(tipo)) {
+                String nomMen = obtenerNombreMenu(idItem);
+                String motivo = "VENTA PEDIDO #" + idPedido + " [" + nomMen + "]";
                 List<DetalleMenu> compList = detalleMenuDao.listarPorMenu(idItem);
                 for (DetalleMenu comp : compList) {
                     BigDecimal cantComp = comp.getCantidadDet().multiply(cant);
                     if ("P".equalsIgnoreCase(comp.getTipoItemDet())) {
-                        aplicarSalidaStock(comp.getIdItemDet(), cantComp);
+                        aplicarSalidaStock(comp.getIdItemDet(), cantComp, motivo);
                     } else if ("S".equalsIgnoreCase(comp.getTipoItemDet())) {
                         List<DetalleSandwich> ingList = detalleSandwichDao.listarPorSandwich(comp.getIdItemDet());
                         for (DetalleSandwich ing : ingList) {
                             BigDecimal requerido = ing.getCantidadDet().multiply(cantComp);
-                            aplicarSalidaStock(ing.getIdProDet(), requerido);
+                            aplicarSalidaStock(ing.getIdProDet(), requerido, motivo);
                         }
                     }
                 }
@@ -300,24 +330,31 @@ public class PagoService {
             BigDecimal cant = d.getCantidadDet() != null ? d.getCantidadDet() : BigDecimal.ONE;
 
             if ("P".equalsIgnoreCase(tipo)) {
-                aplicarEntradaStock(idItem, cant);
+                Productos prod = productosDao.buscarPorId(idItem);
+                String nomProd = prod != null ? prod.getNombrePro() : "Producto #" + idItem;
+                String motivo = "REVERSION PEDIDO #" + idPedido + " [" + nomProd + "]";
+                aplicarEntradaStock(idItem, cant, motivo);
             } else if ("S".equalsIgnoreCase(tipo)) {
+                String nomSan = obtenerNombreSandwich(idItem);
+                String motivo = "REVERSION PEDIDO #" + idPedido + " [" + nomSan + "]";
                 List<DetalleSandwich> ingList = detalleSandwichDao.listarPorSandwich(idItem);
                 for (DetalleSandwich ing : ingList) {
                     BigDecimal requerido = ing.getCantidadDet().multiply(cant);
-                    aplicarEntradaStock(ing.getIdProDet(), requerido);
+                    aplicarEntradaStock(ing.getIdProDet(), requerido, motivo);
                 }
             } else if ("M".equalsIgnoreCase(tipo)) {
+                String nomMen = obtenerNombreMenu(idItem);
+                String motivo = "REVERSION PEDIDO #" + idPedido + " [" + nomMen + "]";
                 List<DetalleMenu> compList = detalleMenuDao.listarPorMenu(idItem);
                 for (DetalleMenu comp : compList) {
                     BigDecimal cantComp = comp.getCantidadDet().multiply(cant);
                     if ("P".equalsIgnoreCase(comp.getTipoItemDet())) {
-                        aplicarEntradaStock(comp.getIdItemDet(), cantComp);
+                        aplicarEntradaStock(comp.getIdItemDet(), cantComp, motivo);
                     } else if ("S".equalsIgnoreCase(comp.getTipoItemDet())) {
                         List<DetalleSandwich> ingList = detalleSandwichDao.listarPorSandwich(comp.getIdItemDet());
                         for (DetalleSandwich ing : ingList) {
                             BigDecimal requerido = ing.getCantidadDet().multiply(cantComp);
-                            aplicarEntradaStock(ing.getIdProDet(), requerido);
+                            aplicarEntradaStock(ing.getIdProDet(), requerido, motivo);
                         }
                     }
                 }
@@ -325,7 +362,25 @@ public class PagoService {
         }
     }
 
-    private void aplicarSalidaStock(int idProducto, BigDecimal cantidad) {
+    private String obtenerNombreSandwich(int idItem) {
+        for (Sandwich s : sandwichDao.listar()) {
+            if (s.getIdSan() == idItem) {
+                return s.getNombreSan();
+            }
+        }
+        return "Sándwich #" + idItem;
+    }
+
+    private String obtenerNombreMenu(int idItem) {
+        for (Menus m : menusDao.listar()) {
+            if (m.getIdMen() == idItem) {
+                return m.getNombreMen();
+            }
+        }
+        return "Combo #" + idItem;
+    }
+
+    private void aplicarSalidaStock(int idProducto, BigDecimal cantidad, String motivo) {
         Productos prod = productosDao.buscarPorId(idProducto);
         if (prod != null) {
             BigDecimal exist = prod.getExistenciaPro() != null ? prod.getExistenciaPro() : BigDecimal.ZERO;
@@ -340,23 +395,28 @@ public class PagoService {
             mov.setIdProImo(idProducto);
             mov.setFechaImo(LocalDateTime.now());
             mov.setCantidadImo(cantidad);
-            mov.setTipoMovimientoImo("VENTA");
+            mov.setTipoMovimientoImo(motivo);
+            mov.setExistenciaAnteriorImo(exist);
+            mov.setExistenciaNuevaImo(nuevoStock);
             inventarioMovimientosDao.insertar(mov);
         }
     }
 
-    private void aplicarEntradaStock(int idProducto, BigDecimal cantidad) {
+    private void aplicarEntradaStock(int idProducto, BigDecimal cantidad, String motivo) {
         Productos prod = productosDao.buscarPorId(idProducto);
         if (prod != null) {
             BigDecimal exist = prod.getExistenciaPro() != null ? prod.getExistenciaPro() : BigDecimal.ZERO;
-            prod.setExistenciaPro(exist.add(cantidad));
+            BigDecimal nuevoStock = exist.add(cantidad);
+            prod.setExistenciaPro(nuevoStock);
             productosDao.actualizar(prod);
 
             InventarioMovimientos mov = new InventarioMovimientos();
             mov.setIdProImo(idProducto);
             mov.setFechaImo(LocalDateTime.now());
             mov.setCantidadImo(cantidad);
-            mov.setTipoMovimientoImo("REVERSION VENTA");
+            mov.setTipoMovimientoImo(motivo);
+            mov.setExistenciaAnteriorImo(exist);
+            mov.setExistenciaNuevaImo(nuevoStock);
             inventarioMovimientosDao.insertar(mov);
         }
     }

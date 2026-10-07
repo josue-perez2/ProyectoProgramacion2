@@ -49,7 +49,8 @@ public class InventarioMovimientosService {
             throw new IllegalStateException("No se puede abastecer un producto inactivo.");
         }
         BigDecimal actual = producto.getExistenciaPro() != null ? producto.getExistenciaPro() : BigDecimal.ZERO;
-        producto.setExistenciaPro(actual.add(cantidad));
+        BigDecimal nueva = actual.add(cantidad);
+        producto.setExistenciaPro(nueva);
         productosDao.actualizar(producto);
 
         InventarioMovimientos mov = new InventarioMovimientos();
@@ -57,6 +58,8 @@ public class InventarioMovimientosService {
         mov.setFechaImo(LocalDateTime.now());
         mov.setCantidadImo(cantidad);
         mov.setTipoMovimientoImo("ABASTECIMIENTO");
+        mov.setExistenciaAnteriorImo(actual);
+        mov.setExistenciaNuevaImo(nueva);
         inventarioMovimientosDao.insertar(mov);
     }
 
@@ -73,7 +76,8 @@ public class InventarioMovimientosService {
             throw new IllegalStateException("Stock insuficiente para el producto: " + producto.getNombrePro()
                     + ". Existencia actual: " + actual + ", requerida: " + cantidad);
         }
-        producto.setExistenciaPro(actual.subtract(cantidad));
+        BigDecimal nueva = actual.subtract(cantidad);
+        producto.setExistenciaPro(nueva);
         productosDao.actualizar(producto);
 
         InventarioMovimientos mov = new InventarioMovimientos();
@@ -81,6 +85,8 @@ public class InventarioMovimientosService {
         mov.setFechaImo(LocalDateTime.now());
         mov.setCantidadImo(cantidad);
         mov.setTipoMovimientoImo("VENTA");
+        mov.setExistenciaAnteriorImo(actual);
+        mov.setExistenciaNuevaImo(nueva);
         inventarioMovimientosDao.insertar(mov);
     }
 

@@ -9,11 +9,39 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 public class DetalleSandwichDaoImpl implements DetalleSandwichDao {
     private final Conexion conexion;
+
+    static {
+        asegurarRecetasBase();
+    }
+
+    private static void asegurarRecetasBase() {
+        Conexion con = new Conexion();
+        try (Connection conn = con.conectar();
+             Statement st = conn.createStatement()) {
+            int conteo = 0;
+            try (ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM DETALLE_SANDWICH")) {
+                if (rs.next()) {
+                    conteo = rs.getInt(1);
+                }
+            }
+            if (conteo == 0) {
+                st.executeUpdate("INSERT INTO DETALLE_SANDWICH (ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET) VALUES (1, 3, 1, 'S')");
+                st.executeUpdate("INSERT INTO DETALLE_SANDWICH (ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET) VALUES (1, 7, 1, 'S')");
+                st.executeUpdate("INSERT INTO DETALLE_SANDWICH (ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET) VALUES (1, 8, 1, 'S')");
+                st.executeUpdate("INSERT INTO DETALLE_SANDWICH (ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET) VALUES (2, 4, 1, 'S')");
+                st.executeUpdate("INSERT INTO DETALLE_SANDWICH (ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET) VALUES (2, 7, 2, 'S')");
+                st.executeUpdate("INSERT INTO DETALLE_SANDWICH (ID_SAN_DET, ID_PRO_DET, CANTIDAD_DET, OBLIGATORIO_DET) VALUES (2, 8, 1, 'S')");
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     public DetalleSandwichDaoImpl() {
         this.conexion = new Conexion();
     }
