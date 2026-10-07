@@ -9,8 +9,12 @@ import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
+import javax.swing.RowFilter;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -49,6 +53,8 @@ public class ProductoView extends JFrame {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscarProducto = FabricaDaisyUI.crearCampoTexto("Buscar por código, nombre o categoría...", 18);
+    private TableRowSorter<DefaultTableModel> clasificadorProducto;
 
     public ProductoView(Window parent) {
         super("Gestión de Productos");
@@ -108,7 +114,9 @@ public class ProductoView extends JFrame {
 
         String[] columnas = {"ID", "Código", "Categoría", "Nombre", "Precio", "Existencia", "Estado"};
         modeloTabla.setColumnIdentifiers(columnas);
+        clasificadorProducto = new TableRowSorter<>(modeloTabla);
         tabla.setModel(modeloTabla);
+        tabla.setRowSorter(clasificadorProducto);
         tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         tabla.getColumnModel().getColumn(6).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
@@ -132,6 +140,44 @@ public class ProductoView extends JFrame {
         JScrollPane scrollTabla = new JScrollPane(tabla);
         scrollTabla.setBorder(BorderFactory.createEmptyBorder());
 
+        JPanel panelBarraBusquedaProducto = new JPanel(new BorderLayout(8, 0));
+        panelBarraBusquedaProducto.setOpaque(false);
+        panelBarraBusquedaProducto.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+
+        JLabel lblBuscarPro = new JLabel("Buscar:");
+        lblBuscarPro.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JButton btnLimpiarBusquedaPro = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(14), e -> {
+            txtBuscarProducto.setText("");
+            filtrarTablaProducto();
+        });
+        btnLimpiarBusquedaPro.setPreferredSize(new Dimension(95, 34));
+
+        panelBarraBusquedaProducto.add(lblBuscarPro, BorderLayout.WEST);
+        panelBarraBusquedaProducto.add(txtBuscarProducto, BorderLayout.CENTER);
+        panelBarraBusquedaProducto.add(btnLimpiarBusquedaPro, BorderLayout.EAST);
+
+        txtBuscarProducto.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filtrarTablaProducto();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filtrarTablaProducto();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filtrarTablaProducto();
+            }
+        });
+
+        JPanel panelContenidoProducto = new JPanel(new BorderLayout(6, 6));
+        panelContenidoProducto.setOpaque(false);
+        panelContenidoProducto.add(panelBarraBusquedaProducto, BorderLayout.NORTH);
+        panelContenidoProducto.add(scrollTabla, BorderLayout.CENTER);
+
         JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
             cargarCategorias();
             cargarTabla();
@@ -140,7 +186,7 @@ public class ProductoView extends JFrame {
         JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccionConBoton(
                 "Productos Registrados",
                 btnRefrescar,
-                scrollTabla
+                panelContenidoProducto
         );
         panelContenedorPrincipal.add(tarjetaTabla, BorderLayout.CENTER);
 
@@ -253,6 +299,30 @@ public class ProductoView extends JFrame {
             cmbCategoria.setSelectedIndex(0);
         }
         cmbActivo.setSelectedItem("Activo");
+    }
+
+    private void filtrarTablaProducto() {
+        if (clasificadorProducto == null) {
+            return;
+        }
+        String texto = txtBuscarProducto.getText().trim();
+        if (texto.isEmpty()) {
+            clasificadorProducto.setRowFilter(null);
+            return;
+        }
+        String textoMin = texto.toLowerCase();
+        clasificadorProducto.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                for (int i = 0; i < entry.getValueCount(); i++) {
+                    String val = entry.getStringValue(i);
+                    if (val != null && val.toLowerCase().contains(textoMin)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
     }
 
     private void seleccionarCategoria(String nombre) {

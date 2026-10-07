@@ -232,7 +232,9 @@ public class CanjesService {
             if (prod == null || prod.getExistenciaPro() == null || prod.getExistenciaPro().compareTo(BigDecimal.ONE) < 0) {
                 throw new IllegalStateException("No hay existencia disponible del producto asociado a la recompensa");
             }
-            prod.setExistenciaPro(prod.getExistenciaPro().subtract(BigDecimal.ONE));
+            BigDecimal anterior = prod.getExistenciaPro();
+            BigDecimal nueva = anterior.subtract(BigDecimal.ONE);
+            prod.setExistenciaPro(nueva);
             productosDao.actualizar(prod);
 
             InventarioMovimientos mov = new InventarioMovimientos();
@@ -240,6 +242,8 @@ public class CanjesService {
             mov.setFechaImo(LocalDateTime.now());
             mov.setCantidadImo(BigDecimal.ONE);
             mov.setTipoMovimientoImo("SALIDA POR CANJE");
+            mov.setExistenciaAnteriorImo(anterior);
+            mov.setExistenciaNuevaImo(nueva);
             inventarioMovimientosDao.insertar(mov);
         } else if ("S".equalsIgnoreCase(tipo)) {
             List<DetalleSandwich> detalles = detalleSandwichDao.listarPorSandwich(idItem);
@@ -254,7 +258,9 @@ public class CanjesService {
             for (DetalleSandwich det : detalles) {
                 Productos prod = mapa.get(det.getIdProDet());
                 if (prod != null && prod.getExistenciaPro() != null) {
-                    prod.setExistenciaPro(prod.getExistenciaPro().subtract(det.getCantidadDet()));
+                    BigDecimal anterior = prod.getExistenciaPro();
+                    BigDecimal nueva = anterior.subtract(det.getCantidadDet());
+                    prod.setExistenciaPro(nueva);
                     productosDao.actualizar(prod);
 
                     InventarioMovimientos mov = new InventarioMovimientos();
@@ -262,6 +268,8 @@ public class CanjesService {
                     mov.setFechaImo(LocalDateTime.now());
                     mov.setCantidadImo(det.getCantidadDet());
                     mov.setTipoMovimientoImo("SALIDA POR CANJE");
+                    mov.setExistenciaAnteriorImo(anterior);
+                    mov.setExistenciaNuevaImo(nueva);
                     inventarioMovimientosDao.insertar(mov);
                 }
             }
@@ -281,7 +289,9 @@ public class CanjesService {
                 if ("P".equalsIgnoreCase(det.getTipoItemDet())) {
                     Productos prod = mapa.get(det.getIdItemDet());
                     if (prod != null && prod.getExistenciaPro() != null) {
-                        prod.setExistenciaPro(prod.getExistenciaPro().subtract(det.getCantidadDet()));
+                        BigDecimal anterior = prod.getExistenciaPro();
+                        BigDecimal nueva = anterior.subtract(det.getCantidadDet());
+                        prod.setExistenciaPro(nueva);
                         productosDao.actualizar(prod);
 
                         InventarioMovimientos mov = new InventarioMovimientos();
@@ -289,6 +299,8 @@ public class CanjesService {
                         mov.setFechaImo(LocalDateTime.now());
                         mov.setCantidadImo(det.getCantidadDet());
                         mov.setTipoMovimientoImo("SALIDA POR CANJE");
+                        mov.setExistenciaAnteriorImo(anterior);
+                        mov.setExistenciaNuevaImo(nueva);
                         inventarioMovimientosDao.insertar(mov);
                     }
                 }

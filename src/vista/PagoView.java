@@ -2,11 +2,16 @@ package vista;
 
 import model.Cliente;
 import model.Pagos;
+import model.pagos.Pago;
+import model.pagos.PagoEfectivo;
+import model.pagos.PagoTarjeta;
 import model.Pedidos;
 import service.ClienteService;
 import service.PagoService;
 import service.PedidoService;
+import vista.util.Actualizable;
 import vista.util.FabricaDaisyUI;
+import vista.util.GestorVentanas;
 import vista.util.Icons;
 import vista.util.TemaGestor;
 
@@ -16,13 +21,15 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PagoView extends JFrame {
+public class PagoView extends JFrame implements Actualizable {
 
     private final PagoService pagoService;
     private final PedidoService pedidoService;
@@ -31,6 +38,7 @@ public class PagoView extends JFrame {
     private final Window parent;
     private final Pedidos pedidoInicial;
     private Integer idPagoSeleccionado = null;
+    private boolean ignorarEventoComboMetodo = false;
 
     private final JComboBox<String> cmbPedido = new JComboBox<>();
     private final JTextField txtCliente = new JTextField();
@@ -77,6 +85,14 @@ public class PagoView extends JFrame {
         this.pagoService = new PagoService();
         this.pedidoService = new PedidoService();
         this.clienteService = new ClienteService();
+
+        GestorVentanas.registrarVentana(this);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                GestorVentanas.desregistrarVentana(PagoView.class);
+            }
+        });
 
         iniciarComponentes();
         cargarPedidos();
@@ -136,6 +152,9 @@ public class PagoView extends JFrame {
         txtReferencia.setPreferredSize(new Dimension(160, 36));
         cmbMetodoPago.setPreferredSize(new Dimension(180, 36));
         cmbMetodoPago.addActionListener(e -> {
+            if (ignorarEventoComboMetodo) {
+                return;
+            }
             String sel = (String) cmbMetodoPago.getSelectedItem();
             boolean esTarjeta = sel != null && sel.toLowerCase().contains("tarjeta");
             int idx = cmbPedido.getSelectedIndex();
@@ -276,6 +295,12 @@ public class PagoView extends JFrame {
     }
 
     private void cargarPedidos() {
+        int idxSeleccionado = cmbPedido.getSelectedIndex();
+        Integer idActual = null;
+        if (idxSeleccionado != -1 && idxSeleccionado < idsPedido.size()) {
+            idActual = idsPedido.get(idxSeleccionado);
+        }
+
         cmbPedido.removeAllItems();
         idsPedido.clear();
         totalesPedido.clear();
@@ -294,6 +319,15 @@ public class PagoView extends JFrame {
                 totalesPedido.add(p.getTotalPed());
                 idsClientePedido.add(p.getIdCliPed());
                 estadosPedido.add(p.getEstadoPed());
+            }
+
+            if (idActual != null) {
+                for (int i = 0; i < idsPedido.size(); i++) {
+                    if (idsPedido.get(i).equals(idActual)) {
+                        cmbPedido.setSelectedIndex(i);
+                        break;
+                    }
+                }
             }
         } catch (RuntimeException ex) {
             FabricaDaisyUI.mostrarError(this, "Error de Datos", "No se pudieron cargar los pedidos: " + ex.getMessage());
@@ -320,6 +354,7 @@ public class PagoView extends JFrame {
             txtMontoRecibido.setText("0.00");
             txtCambio.setText("0.00");
             btnProcesar.setEnabled(false);
+            btnTerminalTarjeta.setEnabled(false);
             return;
         }
 
@@ -333,19 +368,19 @@ public class PagoView extends JFrame {
         if ("C".equalsIgnoreCase(estado)) {
             txtTotalPagar.setText(total.toPlainString() + " (PAGADO)");
             btnProcesar.setEnabled(false);
+            btnTerminalTarjeta.setEnabled(false);
         } else if ("A".equalsIgnoreCase(estado)) {
             txtTotalPagar.setText(total.toPlainString() + " (ANULADO)");
             btnProcesar.setEnabled(false);
+            btnTerminalTarjeta.setEnabled(false);
         } else {
             txtTotalPagar.setText(total.toPlainString());
-            btnProcesar.setEnabled(total.compareTo(BigDecimal.ZERO) > 0);
+            boolean tieneMontoValido = total.compareTo(BigDecimal.ZERO) > 0;
+            btnProcesar.setEnabled(tieneMontoValido);
+            btnTerminalTarjeta.setEnabled(tieneMontoValido);
         }
 
         txtMontoRecibido.setText(total.toPlainString());
-        String selMetodo = (String) cmbMetodoPago.getSelectedItem();
-        boolean esTarjeta = selMetodo != null && selMetodo.toLowerCase().contains("tarjeta");
-        boolean esPendienteConTotal = "P".equalsIgnoreCase(estado) && total.compareTo(BigDecimal.ZERO) > 0;
-        btnTerminalTarjeta.setEnabled(esTarjeta && esPendienteConTotal);
         actualizarEstadoBotones(tablaPagos.getSelectedRow() != -1);
         calcularCambio();
     }
@@ -356,6 +391,7 @@ public class PagoView extends JFrame {
             String est = estadosPedido.get(index);
             if ("C".equalsIgnoreCase(est) || "A".equalsIgnoreCase(est)) {
                 btnProcesar.setEnabled(false);
+                btnTerminalTarjeta.setEnabled(false);
                 return;
             }
         }
@@ -404,7 +440,7 @@ public class PagoView extends JFrame {
         if (fila == -1) {
             idPagoSeleccionado = null;
             txtReferencia.setText("");
-            cmbMetodoPago.setSelectedIndex(0);
+            setMetodoPagoSinDisparar(0);
             seleccionarPedidoDeCombo();
             actualizarEstadoBotones(false);
             return;
@@ -418,10 +454,23 @@ public class PagoView extends JFrame {
                 break;
             }
         }
-        cmbMetodoPago.setSelectedItem(String.valueOf(modeloPagos.getValueAt(filaModelo, 3)));
+        String met = String.valueOf(modeloPagos.getValueAt(filaModelo, 3));
+        setMetodoPagoSinDisparar(met);
         txtMontoRecibido.setText(String.valueOf(modeloPagos.getValueAt(filaModelo, 4)));
         txtReferencia.setText(String.valueOf(modeloPagos.getValueAt(filaModelo, 6)));
+        btnProcesar.setEnabled(false);
+        btnTerminalTarjeta.setEnabled(false);
         actualizarEstadoBotones(true);
+    }
+
+    private void setMetodoPagoSinDisparar(Object item) {
+        ignorarEventoComboMetodo = true;
+        if (item instanceof Integer idx) {
+            cmbMetodoPago.setSelectedIndex(idx);
+        } else if (item != null) {
+            cmbMetodoPago.setSelectedItem(item.toString());
+        }
+        ignorarEventoComboMetodo = false;
     }
 
     private void abrirSimuladorTarjeta() {
@@ -440,6 +489,8 @@ public class PagoView extends JFrame {
 
         if ("C".equalsIgnoreCase(pedido.getEstadoPed())) {
             FabricaDaisyUI.mostrarInformacion(this, "Aviso", "Este pedido ya se encuentra pagado.");
+            btnProcesar.setEnabled(false);
+            btnTerminalTarjeta.setEnabled(false);
             return;
         }
 
@@ -454,10 +505,13 @@ public class PagoView extends JFrame {
 
         if (simDialog.isAprobada()) {
             String ref = simDialog.getCodigoAutorizacion() + " (" + simDialog.getTarjetaEnmascarada() + ")";
+            setMetodoPagoSinDisparar("Tarjeta Crédito/Débito");
             txtReferencia.setText(ref);
             txtMontoRecibido.setText(total.toPlainString());
             txtCambio.setText("0.00");
-            btnProcesar.setEnabled(true);
+            ejecutarPagoFinal(pedido, total, total, BigDecimal.ZERO, "TC", ref);
+        } else {
+            setMetodoPagoSinDisparar(0);
         }
     }
 
@@ -477,12 +531,28 @@ public class PagoView extends JFrame {
 
         if ("C".equalsIgnoreCase(pedido.getEstadoPed())) {
             FabricaDaisyUI.mostrarInformacion(this, "Aviso", "Este pedido ya fue pagado.");
+            btnProcesar.setEnabled(false);
+            btnTerminalTarjeta.setEnabled(false);
             return;
         }
 
         BigDecimal total = pedido.getTotalPed();
         if (total.compareTo(BigDecimal.ZERO) <= 0) {
             FabricaDaisyUI.mostrarAdvertencia(this, "Validación", "No se puede procesar el cobro de un pedido con total Q0.00.");
+            return;
+        }
+
+        String metodo = metodoAbreviado((String) cmbMetodoPago.getSelectedItem());
+        boolean esTarjeta = "TC".equalsIgnoreCase(metodo) || "T".equalsIgnoreCase(metodo)
+                || (cmbMetodoPago.getSelectedItem() != null && cmbMetodoPago.getSelectedItem().toString().toLowerCase().contains("tarjeta"));
+
+        if (esTarjeta) {
+            String referencia = txtReferencia.getText().trim();
+            if (!referencia.startsWith("AUTH-")) {
+                abrirSimuladorTarjeta();
+                return;
+            }
+            ejecutarPagoFinal(pedido, total, total, BigDecimal.ZERO, "TC", referencia);
             return;
         }
 
@@ -500,43 +570,25 @@ public class PagoView extends JFrame {
         }
 
         BigDecimal cambio = montoRecibido.subtract(total);
-        String metodo = metodoAbreviado((String) cmbMetodoPago.getSelectedItem());
-        String referencia = txtReferencia.getText().trim();
+        ejecutarPagoFinal(pedido, total, montoRecibido, cambio, "E", txtReferencia.getText().trim());
+    }
 
-        boolean esTarjeta = "TC".equalsIgnoreCase(metodo) || "T".equalsIgnoreCase(metodo)
-                || (cmbMetodoPago.getSelectedItem() != null && cmbMetodoPago.getSelectedItem().toString().toLowerCase().contains("tarjeta"));
-
-        if (esTarjeta) {
-            if (!referencia.startsWith("AUTH-")) {
-                abrirSimuladorTarjeta();
-                referencia = txtReferencia.getText().trim();
-                if (!referencia.startsWith("AUTH-")) {
-                    return;
-                }
-            }
-            montoRecibido = total;
-            cambio = BigDecimal.ZERO;
-            txtMontoRecibido.setText(total.toPlainString());
-            txtCambio.setText("0.00");
-        }
-
+    private void ejecutarPagoFinal(Pedidos pedido, BigDecimal total, BigDecimal recibido, BigDecimal cambio, String metodo, String referencia) {
         try {
-            Pagos pago = new Pagos();
-            pago.setIdPedPag(idPed);
-            pago.setFechaPag(LocalDateTime.now());
-            pago.setMetodoPagoPag(metodo);
-            pago.setMontoRecibidoPag(montoRecibido);
-            pago.setCambioPag(cambio);
-            pago.setNumeroReferenciaPag(referencia.isEmpty() ? null : referencia);
-            pago.setEstadoPagoPag("P");
+            Pago pago;
+            if ("TC".equalsIgnoreCase(metodo) || "T".equalsIgnoreCase(metodo)) {
+                pago = new PagoTarjeta(pedido.getIdPed(), total, referencia, "VISA", null);
+            } else {
+                pago = new PagoEfectivo(pedido.getIdPed(), total, recibido);
+            }
 
             Cliente cliente = clienteService.buscarClientePorId(pedido.getIdCliPed());
             pagoService.procesarPago(pago, pedido, cliente);
 
             FabricaDaisyUI.mostrarExito(this, "Cobro Completado con Éxito",
                     "El cobro del pedido ha sido registrado correctamente.\n\n"
-                    + "• No. Pedido: #" + idPed + " (Estado: PAGADO)\n"
-                    + "• Método de Pago: " + cmbMetodoPago.getSelectedItem() + "\n"
+                    + "• No. Pedido: #" + pedido.getIdPed() + " (Estado: PAGADO)\n"
+                    + "• Método de Pago: " + ("TC".equalsIgnoreCase(metodo) ? "Tarjeta Crédito/Débito" : "Efectivo") + "\n"
                     + (referencia != null && !referencia.isEmpty() ? "• No. Autorización / Ref: " + referencia + "\n" : "")
                     + "• Total Cobrado: Q" + total.toPlainString() + "\n"
                     + "• Cambio Entregado: Q" + cambio.toPlainString() + "\n"
@@ -545,10 +597,14 @@ public class PagoView extends JFrame {
             cargarPedidos();
             cargarTablaPagos();
             limpiarFormulario();
+            btnProcesar.setEnabled(false);
+            btnTerminalTarjeta.setEnabled(false);
 
-            FacturaView factura = new FacturaView(this, idPed);
+            GestorVentanas.notificarCambio("PAGO");
+
+            FacturaView factura = new FacturaView(this, pedido.getIdPed());
             factura.setVisible(true);
-        } catch (RuntimeException ex) {
+        } catch (Exception ex) {
             FabricaDaisyUI.mostrarError(this, "Error al Procesar Cobro", ex.getMessage());
         }
     }
@@ -586,6 +642,7 @@ public class PagoView extends JFrame {
                 FabricaDaisyUI.mostrarExito(this, "Pago Eliminado", "El pago seleccionado ha sido eliminado correctamente.");
                 cargarTablaPagos();
                 limpiarFormulario();
+                GestorVentanas.notificarCambio("PAGO");
             } catch (RuntimeException ex) {
                 FabricaDaisyUI.mostrarError(this, "Error al Eliminar", ex.getMessage());
             }
@@ -595,7 +652,7 @@ public class PagoView extends JFrame {
     private void limpiarFormulario() {
         idPagoSeleccionado = null;
         txtReferencia.setText("");
-        cmbMetodoPago.setSelectedIndex(0);
+        setMetodoPagoSinDisparar(0);
         btnTerminalTarjeta.setEnabled(false);
         tablaPagos.clearSelection();
         seleccionarPedidoDeCombo();
@@ -610,22 +667,45 @@ public class PagoView extends JFrame {
     }
 
     private String metodoAbreviado(String metodoCompleto) {
-        if ("Tarjeta Crédito/Débito".equalsIgnoreCase(metodoCompleto)) {
+        if (metodoCompleto != null && metodoCompleto.toLowerCase().contains("tarjeta")) {
             return "TC";
         }
-        if ("Transferencia".equalsIgnoreCase(metodoCompleto)) {
+        if (metodoCompleto != null && metodoCompleto.toLowerCase().contains("transferencia")) {
             return "TR";
         }
-        return "EF";
+        return "E";
     }
 
     private String metodoCompleto(String metodoAbreviado) {
-        if ("TC".equalsIgnoreCase(metodoAbreviado) || "TARJETA".equalsIgnoreCase(metodoAbreviado)) {
-            return "Tarjeta Crédito/Débito";
-        }
-        if ("TR".equalsIgnoreCase(metodoAbreviado) || "TRANSFERENCIA".equalsIgnoreCase(metodoAbreviado)) {
-            return "Transferencia";
+        if (metodoAbreviado != null) {
+            String m = metodoAbreviado.toUpperCase().trim();
+            if ("TC".equals(m) || "T".equals(m) || "TARJETA".equals(m)) {
+                return "Tarjeta Crédito/Débito";
+            }
+            if ("TR".equals(m) || "TRANSFERENCIA".equals(m)) {
+                return "Transferencia";
+            }
         }
         return "Efectivo";
+    }
+
+    @Override
+    public void actualizarDatos() {
+        int idx = cmbPedido.getSelectedIndex();
+        Integer idAntes = null;
+        if (idx != -1 && idx < idsPedido.size()) {
+            idAntes = idsPedido.get(idx);
+        }
+        cargarPedidos();
+        cargarTablaPagos();
+        if (idAntes != null) {
+            for (int i = 0; i < idsPedido.size(); i++) {
+                if (idsPedido.get(i).equals(idAntes)) {
+                    cmbPedido.setSelectedIndex(i);
+                    seleccionarPedidoDeCombo();
+                    break;
+                }
+            }
+        }
     }
 }

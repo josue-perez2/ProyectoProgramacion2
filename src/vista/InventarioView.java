@@ -8,7 +8,9 @@ import service.InventarioMovimientosService;
 import service.ProductoService;
 import util.ExportadorCSV;
 import util.FormatoTexto;
+import vista.util.Actualizable;
 import vista.util.FabricaDaisyUI;
+import vista.util.GestorVentanas;
 import vista.util.Icons;
 import vista.util.TemaGestor;
 
@@ -18,9 +20,12 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableColumnModel;
 import javax.swing.text.AbstractDocument;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.format.DateTimeFormatter;
@@ -29,7 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class InventarioView extends JFrame {
+public class InventarioView extends JFrame implements Actualizable {
 
     private final Window parent;
     private final ProductoService productoService;
@@ -72,11 +77,12 @@ public class InventarioView extends JFrame {
 
     private final JComboBox<String> cmbFiltroTipoMov = new JComboBox<>(new String[]{
             "TODOS LOS MOVIMIENTOS",
-            "ABASTECIMIENTO",
-            "VENTA",
-            "CANJE",
-            "REVERSION"
+            "VENTAS",
+            "ABASTECIMIENTOS",
+            "CANJES",
+            "REVERSIONES"
     });
+    private final JTextField txtBuscarMov = FabricaDaisyUI.crearCampoTexto("Buscar en movimientos...", 18);
 
     private final DefaultTableModel modeloMovimientos = new DefaultTableModel() {
         @Override
@@ -84,7 +90,22 @@ public class InventarioView extends JFrame {
             return false;
         }
     };
-    private final JTable tablaMovimientos = new JTable(modeloMovimientos);
+
+    private final JTable tablaMovimientos = new JTable(modeloMovimientos) {
+        @Override
+        public Component prepareRenderer(TableCellRenderer renderer, int row, int column) {
+            Component c = super.prepareRenderer(renderer, row, column);
+            if (!isRowSelected(row)) {
+                Color colorFila = obtenerColorFilaTenue(row);
+                if (colorFila != null) {
+                    c.setBackground(colorFila);
+                } else {
+                    c.setBackground(getBackground());
+                }
+            }
+            return c;
+        }
+    };
 
     private final DateTimeFormatter formateadorFecha = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -99,19 +120,28 @@ public class InventarioView extends JFrame {
         this.inventarioService = new InventarioMovimientosService();
         this.categoriaService = new CategoriaService();
 
+        GestorVentanas.registrarVentana(this);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                GestorVentanas.desregistrarVentana(InventarioView.class);
+            }
+        });
+
         iniciarComponentes();
         cargandoFiltros = true;
         cargarCategorias();
         cargarProductosEnCombo();
         cargandoFiltros = false;
         cargarTablaProductos();
+        configurarColumnasMovimientos();
         cargarTablaMovimientos();
     }
 
     private void iniciarComponentes() {
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-        setSize(1140, 720);
-        setMinimumSize(new Dimension(980, 580));
+        setSize(1180, 750);
+        setMinimumSize(new Dimension(1020, 620));
         setLocationRelativeTo(parent);
         setLayout(new BorderLayout(12, 12));
         getContentPane().setBackground(TemaGestor.esModoOscuro() ? new Color(40, 42, 54) : new Color(248, 250, 252));
@@ -398,12 +428,32 @@ public class InventarioView extends JFrame {
         JPanel panelFiltros = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         panelFiltros.setOpaque(false);
 
-        cmbFiltroTipoMov.setPreferredSize(new Dimension(220, 38));
+        cmbFiltroTipoMov.setPreferredSize(new Dimension(210, 38));
         FabricaDaisyUI.estilizarCampo(cmbFiltroTipoMov);
         cmbFiltroTipoMov.addActionListener(e -> filtrarTablaMovimientos());
 
-        panelFiltros.add(new JLabel("Tipo de Movimiento:"));
+        txtBuscarMov.setPreferredSize(new Dimension(230, 38));
+        txtBuscarMov.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filtrarTablaMovimientos();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filtrarTablaMovimientos();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filtrarTablaMovimientos();
+            }
+        });
+
+        panelFiltros.add(new JLabel("Tipo:"));
         panelFiltros.add(cmbFiltroTipoMov);
+        panelFiltros.add(new JLabel("Buscar:"));
+        panelFiltros.add(txtBuscarMov);
 
         JPanel panelAccionesDer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         panelAccionesDer.setOpaque(false);
@@ -411,6 +461,7 @@ public class InventarioView extends JFrame {
         JButton btnExportarMov = FabricaDaisyUI.crearBotonExportarCsvIcono(e ->
                 ExportadorCSV.exportarTabla(this, tablaMovimientos, "Historial_Movimientos_Inventario"));
         JButton btnLimpiarFiltroMov = FabricaDaisyUI.crearBotonLimpiarFiltros(e -> {
+            txtBuscarMov.setText("");
             cmbFiltroTipoMov.setSelectedIndex(0);
             filtrarTablaMovimientos();
         });
@@ -426,29 +477,9 @@ public class InventarioView extends JFrame {
 
         panel.add(panelBarra, BorderLayout.NORTH);
 
-        String[] cols = {"ID Mov.", "Fecha y Hora", "ID Prod.", "Producto", "Cantidad", "Tipo de Movimiento"};
-        modeloMovimientos.setColumnIdentifiers(cols);
         tablaMovimientos.setModel(modeloMovimientos);
         tablaMovimientos.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tablaMovimientos);
-
-        TableColumnModel cm = tablaMovimientos.getColumnModel();
-        cm.getColumn(0).setPreferredWidth(65);
-        cm.getColumn(0).setMaxWidth(80);
-        cm.getColumn(1).setPreferredWidth(160);
-        cm.getColumn(2).setPreferredWidth(70);
-        cm.getColumn(3).setPreferredWidth(230);
-        cm.getColumn(4).setPreferredWidth(90);
-        cm.getColumn(5).setPreferredWidth(170);
-
-        DefaultTableCellRenderer renderCentro = new DefaultTableCellRenderer();
-        renderCentro.setHorizontalAlignment(SwingConstants.CENTER);
-        cm.getColumn(0).setCellRenderer(renderCentro);
-        cm.getColumn(1).setCellRenderer(renderCentro);
-        cm.getColumn(2).setCellRenderer(renderCentro);
-        cm.getColumn(4).setCellRenderer(renderCentro);
-
-        cm.getColumn(5).setCellRenderer(new RenderizadorTipoMovimiento());
 
         JScrollPane scroll = new JScrollPane(tablaMovimientos);
         scroll.setBorder(BorderFactory.createEmptyBorder());
@@ -487,7 +518,7 @@ public class InventarioView extends JFrame {
             }
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this,
-                    "<html><body style='width: 300px; font-family: Segoe UI, sans-serif;'>Error al cargar catálogo de productos: " + ex.getMessage() + "</body></html>",
+                    "Error al cargar catálogo de productos: " + ex.getMessage(),
                     "Error de Carga",
                     JOptionPane.ERROR_MESSAGE,
                     Icons.x(32));
@@ -534,7 +565,7 @@ public class InventarioView extends JFrame {
         int idx = cmbProductos.getSelectedIndex();
         if (idx == -1 || idx >= idsProductos.size()) {
             JOptionPane.showMessageDialog(this,
-                    "<html><body style='width: 280px; font-family: Segoe UI, sans-serif;'>Seleccione un producto para realizar el abastecimiento.</body></html>",
+                    "Seleccione un producto para realizar el abastecimiento.",
                     "Validación",
                     JOptionPane.WARNING_MESSAGE,
                     Icons.triangleAlert(32));
@@ -543,7 +574,7 @@ public class InventarioView extends JFrame {
         String texto = txtCantidadIngreso.getText().trim();
         if (texto.isEmpty()) {
             JOptionPane.showMessageDialog(this,
-                    "<html><body style='width: 280px; font-family: Segoe UI, sans-serif;'>Ingrese la cantidad en unidades a abastecer.</body></html>",
+                    "Ingrese la cantidad en unidades a abastecer.",
                     "Validación",
                     JOptionPane.WARNING_MESSAGE,
                     Icons.triangleAlert(32));
@@ -555,7 +586,7 @@ public class InventarioView extends JFrame {
             cantidad = new BigDecimal(texto);
             if (cantidad.compareTo(BigDecimal.ZERO) <= 0) {
                 JOptionPane.showMessageDialog(this,
-                        "<html><body style='width: 280px; font-family: Segoe UI, sans-serif;'>La cantidad a abastecer debe ser estrictamente mayor a cero.</body></html>",
+                        "La cantidad a abastecer debe ser mayor a cero.",
                         "Validación",
                         JOptionPane.WARNING_MESSAGE,
                         Icons.triangleAlert(32));
@@ -563,7 +594,7 @@ public class InventarioView extends JFrame {
             }
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this,
-                    "<html><body style='width: 280px; font-family: Segoe UI, sans-serif;'>Ingrese un número entero válido para la cantidad.</body></html>",
+                    "Ingrese un número entero válido para la cantidad.",
                     "Validación",
                     JOptionPane.WARNING_MESSAGE,
                     Icons.triangleAlert(32));
@@ -575,9 +606,8 @@ public class InventarioView extends JFrame {
 
         int confirm = JOptionPane.showConfirmDialog(
                 this,
-                "<html><body style='width: 320px; font-family: Segoe UI, sans-serif;'>"
-                        + "¿Desea registrar el abastecimiento de <b>" + cantidad.stripTrailingZeros().toPlainString() + " unidades</b> para:<br/>"
-                        + "<b>" + prod.getNombrePro() + "</b> [" + prod.getCodigoPro() + "]?</body></html>",
+                "¿Desea registrar el abastecimiento de " + cantidad.stripTrailingZeros().toPlainString() + " unidades para:\n"
+                        + prod.getNombrePro() + " [" + prod.getCodigoPro() + "]?",
                 "Confirmar Abastecimiento",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE,
@@ -596,9 +626,10 @@ public class InventarioView extends JFrame {
             seleccionarProductoPorId(idPro);
             cargarTablaProductos();
             cargarTablaMovimientos();
+            GestorVentanas.notificarCambio("INVENTARIO");
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this,
-                    "<html><body style='width: 320px; font-family: Segoe UI, sans-serif;'>Error al registrar abastecimiento: " + ex.getMessage() + "</body></html>",
+                    "Error al registrar abastecimiento: " + ex.getMessage(),
                     "Error de Abastecimiento",
                     JOptionPane.ERROR_MESSAGE,
                     Icons.x(32));
@@ -677,8 +708,96 @@ public class InventarioView extends JFrame {
         }
     }
 
+    private void configurarColumnasMovimientos() {
+        String[] cols = {"ID Mov.", "Fecha y Hora", "ID Prod.", "Producto", "Cantidad", "Stock Anterior", "Stock Nuevo", "Tipo de Movimiento"};
+        modeloMovimientos.setColumnIdentifiers(cols);
+        TableColumnModel cm = tablaMovimientos.getColumnModel();
+        cm.getColumn(0).setPreferredWidth(55);
+        cm.getColumn(0).setMaxWidth(70);
+        cm.getColumn(1).setPreferredWidth(140);
+        cm.getColumn(2).setPreferredWidth(65);
+        cm.getColumn(3).setPreferredWidth(210);
+        cm.getColumn(4).setPreferredWidth(75);
+        cm.getColumn(5).setPreferredWidth(85);
+        cm.getColumn(6).setPreferredWidth(85);
+        cm.getColumn(7).setPreferredWidth(190);
+
+        RenderizadorCentro renderCentro = new RenderizadorCentro();
+        RenderizadorIzquierda renderIzq = new RenderizadorIzquierda();
+        cm.getColumn(0).setCellRenderer(renderCentro);
+        cm.getColumn(1).setCellRenderer(renderCentro);
+        cm.getColumn(2).setCellRenderer(renderCentro);
+        cm.getColumn(3).setCellRenderer(renderIzq);
+        cm.getColumn(4).setCellRenderer(renderCentro);
+        cm.getColumn(5).setCellRenderer(renderCentro);
+        cm.getColumn(6).setCellRenderer(renderCentro);
+        cm.getColumn(7).setCellRenderer(new RenderizadorTipoMovimiento());
+    }
+
     private void cargarTablaMovimientos() {
         filtrarTablaMovimientos();
+    }
+
+    private Color obtenerColorFilaTenue(int row) {
+        if (row < 0 || row >= tablaMovimientos.getRowCount()) {
+            return null;
+        }
+        int filaModelo = tablaMovimientos.convertRowIndexToModel(row);
+        Object tipoObj = modeloMovimientos.getValueAt(filaModelo, 7);
+        if (tipoObj == null) {
+            return null;
+        }
+        String tipo = tipoObj.toString().toUpperCase().trim();
+        if (tipo.contains("PEDIDO #")) {
+            int idx = tipo.indexOf("PEDIDO #");
+            int finNum = idx + 8;
+            while (finNum < tipo.length() && Character.isDigit(tipo.charAt(finNum))) {
+                finNum++;
+            }
+            String pedIdStr = tipo.substring(idx + 8, finNum).trim();
+            try {
+                int pedId = Integer.parseInt(pedIdStr);
+                return obtenerTonoTenuePorPedido(pedId);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        if (tipo.contains("VENTA")) {
+            Object fechaObj = modeloMovimientos.getValueAt(filaModelo, 1);
+            if (fechaObj != null) {
+                String fechaStr = fechaObj.toString().trim();
+                if (!fechaStr.isEmpty()) {
+                    int grupo = Math.abs(fechaStr.hashCode());
+                    return obtenerTonoTenuePorPedido(grupo);
+                }
+            }
+        }
+        return null;
+    }
+
+    private Color obtenerTonoTenuePorPedido(int clave) {
+        int indice = Math.abs(clave) % 6;
+        boolean oscuro = TemaGestor.esModoOscuro();
+        if (oscuro) {
+            Color[] paletaOscura = {
+                    new Color(30, 48, 75),
+                    new Color(20, 55, 40),
+                    new Color(50, 35, 70),
+                    new Color(60, 48, 20),
+                    new Color(60, 30, 40),
+                    new Color(20, 50, 60)
+            };
+            return paletaOscura[indice];
+        } else {
+            Color[] paletaClara = {
+                    new Color(224, 231, 255),
+                    new Color(209, 250, 229),
+                    new Color(243, 232, 255),
+                    new Color(254, 240, 138),
+                    new Color(255, 228, 230),
+                    new Color(207, 250, 254)
+            };
+            return paletaClara[indice];
+        }
     }
 
     private void filtrarTablaMovimientos() {
@@ -690,34 +809,63 @@ public class InventarioView extends JFrame {
 
         String tipoFiltro = cmbFiltroTipoMov.getSelectedItem() != null ? cmbFiltroTipoMov.getSelectedItem().toString() : "TODOS LOS MOVIMIENTOS";
         String normFiltro = tipoFiltro.toUpperCase().trim();
+        String criterioTexto = normalizarTexto(txtBuscarMov.getText());
 
         try {
             List<InventarioMovimientos> lista = inventarioService.listar();
             for (InventarioMovimientos m : lista) {
                 String tipo = m.getTipoMovimientoImo() != null ? m.getTipoMovimientoImo().toUpperCase().trim() : "";
                 if (!normFiltro.startsWith("TODOS")) {
-                    if ("VENTA".equals(normFiltro)) {
-                        if (!"VENTA".equals(tipo)) {
+                    if (normFiltro.contains("VENTA")) {
+                        if (!tipo.contains("VENTA")) {
+                            continue;
+                        }
+                    } else if (normFiltro.contains("ABASTEC")) {
+                        if (!tipo.contains("ABASTEC")) {
+                            continue;
+                        }
+                    } else if (normFiltro.contains("CANJE")) {
+                        if (!tipo.contains("CANJE")) {
+                            continue;
+                        }
+                    } else if (normFiltro.contains("REVERSION")) {
+                        if (!tipo.contains("REVERSION")) {
                             continue;
                         }
                     } else if (!tipo.contains(normFiltro)) {
                         continue;
                     }
                 }
+
                 String nomProd = nombreProductos.getOrDefault(m.getIdProImo(), "Producto #" + m.getIdProImo());
                 String fecha = m.getFechaImo() != null ? m.getFechaImo().format(formateadorFecha) : "";
+                String stockAnt = m.getExistenciaAnteriorImo() != null ? m.getExistenciaAnteriorImo().stripTrailingZeros().toPlainString() : "-";
+                String stockNue = m.getExistenciaNuevaImo() != null ? m.getExistenciaNuevaImo().stripTrailingZeros().toPlainString() : "-";
+
+                if (!criterioTexto.isEmpty()) {
+                    boolean match = normalizarTexto(nomProd).contains(criterioTexto)
+                            || normalizarTexto(tipo).contains(criterioTexto)
+                            || normalizarTexto(fecha).contains(criterioTexto)
+                            || String.valueOf(m.getIdImo()).contains(criterioTexto);
+                    if (!match) {
+                        continue;
+                    }
+                }
+
                 modeloMovimientos.addRow(new Object[]{
                         m.getIdImo(),
                         fecha,
                         m.getIdProImo(),
                         nomProd,
                         m.getCantidadImo() != null ? m.getCantidadImo().stripTrailingZeros().toPlainString() : "0",
+                        stockAnt,
+                        stockNue,
                         m.getTipoMovimientoImo() != null ? m.getTipoMovimientoImo() : ""
                 });
             }
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this,
-                    "<html><body style='width: 300px; font-family: Segoe UI, sans-serif;'>Error al cargar movimientos: " + ex.getMessage() + "</body></html>",
+                    "Error al cargar movimientos: " + ex.getMessage(),
                     "Error de Carga",
                     JOptionPane.ERROR_MESSAGE,
                     Icons.x(32));
@@ -810,56 +958,80 @@ public class InventarioView extends JFrame {
         }
     }
 
-    private static class RenderizadorTipoMovimiento extends DefaultTableCellRenderer {
+    private class RenderizadorCentro extends DefaultTableCellRenderer {
+        RenderizadorCentro() {
+            setHorizontalAlignment(SwingConstants.CENTER);
+        }
+
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            JPanel panel = new JPanel(new GridBagLayout());
-            panel.setOpaque(true);
-            panel.setBackground(isSelected ? table.getSelectionBackground() : table.getBackground());
-
-            String val = value != null ? value.toString() : "";
-            Color colorTexto;
-            Color colorFondo;
-
-            if ("ABASTECIMIENTO".equalsIgnoreCase(val)) {
-                colorTexto = new Color(16, 185, 129);
-                colorFondo = TemaGestor.esModoOscuro() ? new Color(20, 55, 40) : new Color(220, 252, 231);
-            } else if ("VENTA".equalsIgnoreCase(val)) {
-                colorTexto = new Color(59, 130, 246);
-                colorFondo = TemaGestor.esModoOscuro() ? new Color(30, 41, 59) : new Color(239, 246, 255);
-            } else if (val.contains("CANJE")) {
-                colorTexto = new Color(168, 85, 247);
-                colorFondo = TemaGestor.esModoOscuro() ? new Color(50, 30, 65) : new Color(243, 232, 255);
-            } else if (val.contains("REVERSION")) {
-                colorTexto = new Color(217, 119, 6);
-                colorFondo = TemaGestor.esModoOscuro() ? new Color(60, 42, 20) : new Color(254, 243, 199);
-            } else {
-                colorTexto = new Color(100, 116, 139);
-                colorFondo = TemaGestor.esModoOscuro() ? new Color(40, 45, 55) : new Color(241, 245, 249);
-            }
-
-            JLabel badge = new JLabel(val) {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    Graphics2D g2 = (Graphics2D) g.create();
-                    g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                    g2.setColor(colorFondo);
-                    g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
-                    g2.setColor(colorTexto);
-                    g2.setStroke(new BasicStroke(1.0f));
-                    g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 12, 12);
-                    g2.dispose();
-                    super.paintComponent(g);
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            if (!isSelected) {
+                Color colorFila = obtenerColorFilaTenue(row);
+                if (colorFila != null) {
+                    c.setBackground(colorFila);
+                } else {
+                    c.setBackground(table.getBackground());
                 }
-            };
-            badge.setOpaque(false);
-            badge.setForeground(colorTexto);
-            badge.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            badge.setHorizontalAlignment(SwingConstants.CENTER);
-            badge.setBorder(new EmptyBorder(3, 10, 3, 10));
-
-            panel.add(badge);
-            return panel;
+            }
+            return c;
         }
+    }
+
+    private class RenderizadorIzquierda extends DefaultTableCellRenderer {
+        private final Insets padding = new Insets(0, 14, 0, 14);
+
+        RenderizadorIzquierda() {
+            setHorizontalAlignment(SwingConstants.LEFT);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            setBorder(BorderFactory.createEmptyBorder(padding.top, padding.left, padding.bottom, padding.right));
+            if (!isSelected) {
+                Color colorFila = obtenerColorFilaTenue(row);
+                if (colorFila != null) {
+                    c.setBackground(colorFila);
+                } else {
+                    c.setBackground(table.getBackground());
+                }
+            }
+            return c;
+        }
+    }
+
+    private class RenderizadorTipoMovimiento extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            label.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            String val = value != null ? value.toString() : "";
+            if (val.contains("ABASTECIMIENTO")) {
+                label.setForeground(new Color(16, 185, 129));
+            } else if (val.contains("VENTA")) {
+                label.setForeground(new Color(59, 130, 246));
+            } else if (val.contains("CANJE")) {
+                label.setForeground(new Color(168, 85, 247));
+            } else if (val.contains("REVERSION")) {
+                label.setForeground(new Color(217, 119, 6));
+            } else {
+                label.setForeground(table.getForeground());
+            }
+            if (!isSelected) {
+                Color c = obtenerColorFilaTenue(row);
+                if (c != null) {
+                    label.setBackground(c);
+                } else {
+                    label.setBackground(table.getBackground());
+                }
+            }
+            return label;
+        }
+    }
+
+    @Override
+    public void actualizarDatos() {
+        refrescarTodo();
     }
 }

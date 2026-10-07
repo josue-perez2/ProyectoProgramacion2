@@ -12,8 +12,12 @@ import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
+import javax.swing.RowFilter;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -53,6 +57,8 @@ public class SandwichView extends JFrame {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscarSandwich = FabricaDaisyUI.crearCampoTexto("Buscar por código o nombre...", 16);
+    private TableRowSorter<DefaultTableModel> clasificadorSandwich;
 
     private final DefaultTableModel modeloDetalle = new DefaultTableModel() {
         @Override
@@ -165,7 +171,9 @@ public class SandwichView extends JFrame {
         panelTablas.setOpaque(false);
 
         modeloTabla.setColumnIdentifiers(new String[]{"ID", "Código", "Nombre", "Precio", "Activo"});
+        clasificadorSandwich = new TableRowSorter<>(modeloTabla);
         tabla.setModel(modeloTabla);
+        tabla.setRowSorter(clasificadorSandwich);
         tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
         FabricaDaisyUI.estilizarTabla(tabla);
         tabla.getColumnModel().getColumn(4).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
@@ -187,6 +195,44 @@ public class SandwichView extends JFrame {
         JScrollPane scrollTabla = new JScrollPane(tabla);
         scrollTabla.setBorder(BorderFactory.createEmptyBorder());
 
+        JPanel panelBarraBusquedaSandwich = new JPanel(new BorderLayout(8, 0));
+        panelBarraBusquedaSandwich.setOpaque(false);
+        panelBarraBusquedaSandwich.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+
+        JLabel lblBuscarSan = new JLabel("Buscar:");
+        lblBuscarSan.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JButton btnLimpiarBusquedaSan = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(14), e -> {
+            txtBuscarSandwich.setText("");
+            filtrarTablaSandwich();
+        });
+        btnLimpiarBusquedaSan.setPreferredSize(new Dimension(95, 34));
+
+        panelBarraBusquedaSandwich.add(lblBuscarSan, BorderLayout.WEST);
+        panelBarraBusquedaSandwich.add(txtBuscarSandwich, BorderLayout.CENTER);
+        panelBarraBusquedaSandwich.add(btnLimpiarBusquedaSan, BorderLayout.EAST);
+
+        txtBuscarSandwich.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filtrarTablaSandwich();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filtrarTablaSandwich();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filtrarTablaSandwich();
+            }
+        });
+
+        JPanel panelContenidoSandwich = new JPanel(new BorderLayout(6, 6));
+        panelContenidoSandwich.setOpaque(false);
+        panelContenidoSandwich.add(panelBarraBusquedaSandwich, BorderLayout.NORTH);
+        panelContenidoSandwich.add(scrollTabla, BorderLayout.CENTER);
+
         JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
             cargarProductos();
             cargarTabla();
@@ -195,7 +241,7 @@ public class SandwichView extends JFrame {
         JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccionConBoton(
                 "Lista de Sándwiches",
                 btnRefrescar,
-                scrollTabla
+                panelContenidoSandwich
         );
 
         modeloDetalle.setColumnIdentifiers(new String[]{"ID", "Ingrediente", "Cantidad", "Tipo"});
@@ -361,6 +407,30 @@ public class SandwichView extends JFrame {
         txtCantidad.setText("1");
         cmbObligatorio.setSelectedItem("Incluido");
         modeloDetalle.setRowCount(0);
+    }
+
+    private void filtrarTablaSandwich() {
+        if (clasificadorSandwich == null) {
+            return;
+        }
+        String texto = txtBuscarSandwich.getText().trim();
+        if (texto.isEmpty()) {
+            clasificadorSandwich.setRowFilter(null);
+            return;
+        }
+        String textoMin = texto.toLowerCase();
+        clasificadorSandwich.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                for (int i = 0; i < entry.getValueCount(); i++) {
+                    String val = entry.getStringValue(i);
+                    if (val != null && val.toLowerCase().contains(textoMin)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
     }
 
     private void guardarSandwich() {

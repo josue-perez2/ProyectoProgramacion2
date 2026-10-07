@@ -7,6 +7,7 @@ import service.CanjesService;
 import service.ClienteService;
 import service.RecompensaService;
 import util.FormatoTexto;
+import vista.util.Actualizable;
 import vista.util.FabricaDaisyUI;
 import vista.util.GestorVentanas;
 import vista.util.Icons;
@@ -18,13 +19,15 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
 import javax.swing.text.AbstractDocument;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CanjeView extends JFrame {
+public class CanjeView extends JFrame implements Actualizable {
 
     private final CanjesService canjesService;
     private final ClienteService clienteService;
@@ -74,6 +77,14 @@ public class CanjeView extends JFrame {
         this.canjesService = new CanjesService();
         this.clienteService = new ClienteService();
         this.recompensaService = new RecompensaService();
+
+        GestorVentanas.registrarVentana(this);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                GestorVentanas.desregistrarVentana(CanjeView.class);
+            }
+        });
 
         iniciarComponentes();
 
@@ -458,6 +469,7 @@ public class CanjeView extends JFrame {
             }
 
             FabricaDaisyUI.mostrarToastExito(this, "Canje procesado exitosamente (" + recompensa.getNombreRec() + ")");
+            GestorVentanas.notificarCambio("CANJE");
             int saldoNuevoCalculado = clienteActualizado != null ? clienteActualizado.getSaldoPuntoCli().intValue() : (saldoActual - costoPuntos);
             ComprobanteCanjeView comp = new ComprobanteCanjeView(this, canjeGenerado, recompensa, clienteActualizado != null ? clienteActualizado : clienteActual, saldoActual, saldoNuevoCalculado);
             comp.setVisible(true);
@@ -573,6 +585,14 @@ public class CanjeView extends JFrame {
         dispose();
         if (parent != null && parent.isDisplayable()) {
             parent.toFront();
+        }
+    }
+
+    @Override
+    public void actualizarDatos() {
+        if (clienteActual != null) {
+            Cliente fresco = clienteService.buscarClientePorId(clienteActual.getIdCli());
+            asignarClienteActual(fresco);
         }
     }
 }

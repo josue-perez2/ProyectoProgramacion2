@@ -317,12 +317,15 @@ public class FacturaView extends JDialog {
 
             if (pago != null) {
                 String met = pago.getMetodoPagoPag();
-                if ("EF".equals(met)) {
-                    metodoDesc = "EFECTIVO";
-                } else if ("TC".equals(met)) {
-                    metodoDesc = "TARJETA CRÉDITO/DÉBITO";
-                } else if ("TR".equals(met)) {
-                    metodoDesc = "TRANSFERENCIA";
+                if (met != null) {
+                    String m = met.toUpperCase().trim();
+                    if ("EF".equals(m) || "E".equals(m) || m.contains("EFECTIVO")) {
+                        metodoDesc = "EFECTIVO";
+                    } else if ("TC".equals(m) || "T".equals(m) || "TJ".equals(m) || m.contains("TARJETA")) {
+                        metodoDesc = "TARJETA CRÉDITO/DÉBITO";
+                    } else if ("TR".equals(m) || "TF".equals(m) || m.contains("TRANSFER")) {
+                        metodoDesc = "TRANSFERENCIA";
+                    }
                 }
                 montoRecibido = pago.getMontoRecibidoPag() != null ? pago.getMontoRecibidoPag() : BigDecimal.ZERO;
                 cambio = pago.getCambioPag() != null ? pago.getCambioPag() : BigDecimal.ZERO;
@@ -330,9 +333,12 @@ public class FacturaView extends JDialog {
             }
 
             add(crearFilaTexto("MÉTODO DE PAGO:", metodoDesc, fuenteMonoBold, colorTexto));
-            if (pago != null && "EF".equals(pago.getMetodoPagoPag())) {
-                add(crearFilaMonto("EFECTIVO:", montoRecibido, fuenteMono, colorTexto));
-                add(crearFilaMonto("CAMBIO:", cambio, fuenteMonoBold, new Color(16, 185, 129)));
+            if (pago != null && pago.getMetodoPagoPag() != null) {
+                String m = pago.getMetodoPagoPag().toUpperCase().trim();
+                if ("EF".equals(m) || "E".equals(m) || m.contains("EFECTIVO")) {
+                    add(crearFilaMonto("EFECTIVO:", montoRecibido, fuenteMono, colorTexto));
+                    add(crearFilaMonto("CAMBIO:", cambio, fuenteMonoBold, new Color(16, 185, 129)));
+                }
             }
             if (!referencia.isBlank()) {
                 add(crearFilaTexto("NO. REFERENCIA:", referencia, fuenteMono, colorTexto));

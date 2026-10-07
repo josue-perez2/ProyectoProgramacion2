@@ -14,8 +14,12 @@ import vista.util.Icons;
 import vista.util.TemaGestor;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumnModel;
+import javax.swing.table.TableRowSorter;
+import javax.swing.RowFilter;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -64,6 +68,8 @@ public class MenuView extends JFrame {
         }
     };
     private final JTable tabla = new JTable(modeloTabla);
+    private final JTextField txtBuscarMenu = FabricaDaisyUI.crearCampoTexto("Buscar por código o nombre...", 16);
+    private TableRowSorter<DefaultTableModel> clasificadorMenu;
 
     private final DefaultTableModel modeloDetalle = new DefaultTableModel() {
         @Override
@@ -176,8 +182,9 @@ public class MenuView extends JFrame {
         panelTablas.setOpaque(false);
 
         modeloTabla.setColumnIdentifiers(new String[]{"ID", "Código", "Nombre", "Precio", "Activo"});
+        clasificadorMenu = new TableRowSorter<>(modeloTabla);
         tabla.setModel(modeloTabla);
-        tabla.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        tabla.setRowSorter(clasificadorMenu);
         FabricaDaisyUI.estilizarTabla(tabla);
         tabla.getColumnModel().getColumn(4).setCellRenderer(new FabricaDaisyUI.RenderizadorInsigniaEstado());
 
@@ -197,6 +204,44 @@ public class MenuView extends JFrame {
         JScrollPane scrollTabla = new JScrollPane(tabla);
         scrollTabla.setBorder(BorderFactory.createEmptyBorder());
 
+        JPanel panelBarraBusquedaMenu = new JPanel(new BorderLayout(8, 0));
+        panelBarraBusquedaMenu.setOpaque(false);
+        panelBarraBusquedaMenu.setBorder(BorderFactory.createEmptyBorder(0, 0, 6, 0));
+
+        JLabel lblBuscarMen = new JLabel("Buscar:");
+        lblBuscarMen.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        JButton btnLimpiarBusquedaMen = FabricaDaisyUI.crearBotonNeutral("Limpiar", Icons.broom(14), e -> {
+            txtBuscarMenu.setText("");
+            filtrarTablaMenu();
+        });
+        btnLimpiarBusquedaMen.setPreferredSize(new Dimension(95, 34));
+
+        panelBarraBusquedaMenu.add(lblBuscarMen, BorderLayout.WEST);
+        panelBarraBusquedaMenu.add(txtBuscarMenu, BorderLayout.CENTER);
+        panelBarraBusquedaMenu.add(btnLimpiarBusquedaMen, BorderLayout.EAST);
+
+        txtBuscarMenu.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                filtrarTablaMenu();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                filtrarTablaMenu();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                filtrarTablaMenu();
+            }
+        });
+
+        JPanel panelContenidoMenu = new JPanel(new BorderLayout(6, 6));
+        panelContenidoMenu.setOpaque(false);
+        panelContenidoMenu.add(panelBarraBusquedaMenu, BorderLayout.NORTH);
+        panelContenidoMenu.add(scrollTabla, BorderLayout.CENTER);
+
         JButton btnRefrescar = FabricaDaisyUI.crearBotonRefrescar(e -> {
             cargarItems();
             cargarTabla();
@@ -205,7 +250,7 @@ public class MenuView extends JFrame {
         JPanel tarjetaTabla = FabricaDaisyUI.crearTarjetaSeccionConBoton(
                 "Lista de Combos",
                 btnRefrescar,
-                scrollTabla
+                panelContenidoMenu
         );
 
         modeloDetalle.setColumnIdentifiers(new String[]{"ID", "Tipo", "Item", "Cantidad"});
@@ -393,6 +438,30 @@ public class MenuView extends JFrame {
         cmbActivo.setSelectedItem("Activo");
         txtCantidad.setText("1");
         modeloDetalle.setRowCount(0);
+    }
+
+    private void filtrarTablaMenu() {
+        if (clasificadorMenu == null) {
+            return;
+        }
+        String texto = txtBuscarMenu.getText().trim();
+        if (texto.isEmpty()) {
+            clasificadorMenu.setRowFilter(null);
+            return;
+        }
+        String textoMin = texto.toLowerCase();
+        clasificadorMenu.setRowFilter(new RowFilter<DefaultTableModel, Integer>() {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                for (int i = 0; i < entry.getValueCount(); i++) {
+                    String val = entry.getStringValue(i);
+                    if (val != null && val.toLowerCase().contains(textoMin)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
     }
 
     private void guardarMenu() {
