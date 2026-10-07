@@ -13,7 +13,6 @@ import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -30,23 +29,9 @@ public class VentasPorPeriodoDialog extends JDialog {
     private final JButton btnGenerar = new JButton("Generar Reporte");
     private final JButton btnExportar = FabricaDaisyUI.crearBotonExportarCsv(e -> exportarCsv());
     private final JButton btnCerrar = new JButton("Cerrar");
-    private final JLabel lblTotalesAlPie = new JLabel("Total Período: Q0.00   |   Efectivo: Q0.00   |   Tarjeta: Q0.00");
+    private final JLabel lblTotalesAlPie = new JLabel("Total: Q0.00   |   Efectivo: Q0.00   |   Tarjeta: Q0.00");
 
-    private final JTable tabla = new JTable() {
-        @Override
-        public void paint(Graphics g) {
-            super.paint(g);
-            if (getRowCount() == 0) {
-                Graphics2D g2 = (Graphics2D) g;
-                g2.setColor(TemaGestor.esModoOscuro() ? new Color(98, 114, 164) : Color.GRAY);
-                FontMetrics fm = g2.getFontMetrics();
-                String mensaje = "Sin datos para el rango seleccionado";
-                int x = (getWidth() - fm.stringWidth(mensaje)) / 2;
-                int y = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();
-                g2.drawString(mensaje, x, y);
-            }
-        }
-    };
+    private final JTable tabla = new JTable();
     private final DefaultTableModel modeloTabla = new DefaultTableModel() {
         @Override
         public boolean isCellEditable(int row, int column) {
@@ -73,7 +58,6 @@ public class VentasPorPeriodoDialog extends JDialog {
         panelContenedor.setBorder(new EmptyBorder(14, 18, 14, 18));
         panelContenedor.setOpaque(false);
 
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
         spFechaInicio.setEditor(new JSpinner.DateEditor(spFechaInicio, "dd/MM/yyyy"));
         spFechaFin.setEditor(new JSpinner.DateEditor(spFechaFin, "dd/MM/yyyy"));
         spFechaInicio.setPreferredSize(new Dimension(140, 36));
@@ -160,17 +144,28 @@ public class VentasPorPeriodoDialog extends JDialog {
             BigDecimal totalVentas = BigDecimal.ZERO;
             BigDecimal totalEfectivo = BigDecimal.ZERO;
             BigDecimal totalTarjeta = BigDecimal.ZERO;
+            BigDecimal totalTransferencia = BigDecimal.ZERO;
 
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
             for (VentaPorPeriodoDTO v : lista) {
                 String fechaTexto = v.getFechaHora() != null ? v.getFechaHora().format(dtf) : (v.getFecha() != null ? v.getFecha().toString() : "");
-                String metodoTexto = "E".equalsIgnoreCase(v.getMetodoPago()) ? "Efectivo" : ("T".equalsIgnoreCase(v.getMetodoPago()) ? "Tarjeta" : v.getMetodoPago());
+                String metOriginal = v.getMetodoPago() != null ? v.getMetodoPago().toUpperCase().trim() : "";
+                String metodoTexto;
                 BigDecimal pag = v.getTotalPagado() != null ? v.getTotalPagado() : BigDecimal.ZERO;
                 totalVentas = totalVentas.add(pag);
-                if ("E".equalsIgnoreCase(v.getMetodoPago())) {
+
+                if ("E".equals(metOriginal) || "EF".equals(metOriginal) || metOriginal.contains("EFECTIVO")) {
+                    metodoTexto = "Efectivo";
                     totalEfectivo = totalEfectivo.add(pag);
-                } else if ("T".equalsIgnoreCase(v.getMetodoPago())) {
+                } else if ("TC".equals(metOriginal) || "T".equals(metOriginal) || "TJ".equals(metOriginal) || metOriginal.contains("TARJETA")) {
+                    metodoTexto = "Tarjeta";
                     totalTarjeta = totalTarjeta.add(pag);
+                } else if ("TF".equals(metOriginal) || "TR".equals(metOriginal) || metOriginal.contains("TRANSFER")) {
+                    metodoTexto = "Transferencia";
+                    totalTransferencia = totalTransferencia.add(pag);
+                } else {
+                    metodoTexto = v.getMetodoPago() != null && !v.getMetodoPago().trim().isEmpty() ? v.getMetodoPago() : "Otro";
+                    totalEfectivo = totalEfectivo.add(pag);
                 }
 
                 modeloTabla.addRow(new Object[]{
@@ -182,9 +177,15 @@ public class VentasPorPeriodoDialog extends JDialog {
                         v.getPuntos() + " pts"
                 });
             }
-            lblTotalesAlPie.setText("Total Período: Q" + totalVentas.setScale(2, RoundingMode.HALF_UP)
-                    + "   |   Efectivo: Q" + totalEfectivo.setScale(2, RoundingMode.HALF_UP)
-                    + "   |   Tarjeta: Q" + totalTarjeta.setScale(2, RoundingMode.HALF_UP));
+
+            StringBuilder sbTotales = new StringBuilder();
+            sbTotales.append("Total: Q").append(totalVentas.setScale(2, RoundingMode.HALF_UP));
+            sbTotales.append("   |   Efectivo: Q").append(totalEfectivo.setScale(2, RoundingMode.HALF_UP));
+            sbTotales.append("   |   Tarjeta: Q").append(totalTarjeta.setScale(2, RoundingMode.HALF_UP));
+            if (totalTransferencia.compareTo(BigDecimal.ZERO) > 0) {
+                sbTotales.append("   |   Transferencia: Q").append(totalTransferencia.setScale(2, RoundingMode.HALF_UP));
+            }
+            lblTotalesAlPie.setText(sbTotales.toString());
             FabricaDaisyUI.mostrarToastExito(this, "Reporte generado: " + lista.size() + " registros.");
         } catch (RuntimeException ex) {
             FabricaDaisyUI.mostrarError(this, "Error", "Error al generar reporte: " + ex.getMessage());

@@ -51,7 +51,8 @@ public class ReportesDaoImpl implements ReportesDao {
                     dto.setTotalPagado(rs.getBigDecimal("TOTAL_PAGADO"));
                     dto.setPuntos(rs.getInt("PUNTOS"));
                     dto.setTotalVenta(dto.getTotalPagado());
-                    if ("E".equalsIgnoreCase(dto.getMetodoPago())) {
+                    String metDto = dto.getMetodoPago() != null ? dto.getMetodoPago().toUpperCase().trim() : "";
+                    if ("E".equals(metDto) || "EF".equals(metDto) || metDto.contains("EFECTIVO")) {
                         dto.setTotalEfectivo(dto.getTotalPagado());
                         dto.setTotalTarjeta(BigDecimal.ZERO);
                     } else {

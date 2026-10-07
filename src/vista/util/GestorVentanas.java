@@ -1,8 +1,11 @@
 package vista.util;
 
+import javax.swing.SwingUtilities;
 import java.awt.Frame;
 import java.awt.Window;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -23,6 +26,16 @@ public final class GestorVentanas {
         ventanasActivas.put(clase, nueva);
         enfocar(nueva);
         return nueva;
+    }
+
+    public static synchronized void registrarVentana(Window ventana) {
+        if (ventana != null) {
+            ventanasActivas.put(ventana.getClass(), ventana);
+        }
+    }
+
+    public static synchronized void desregistrarVentana(Class<?> clase) {
+        ventanasActivas.remove(clase);
     }
 
     public static synchronized boolean estaAbierta(Class<?> clase) {
@@ -60,5 +73,22 @@ public final class GestorVentanas {
             }
         }
         ventanasActivas.clear();
+    }
+
+    public static void notificarCambio(String tipo) {
+        SwingUtilities.invokeLater(() -> {
+            List<Window> copia;
+            synchronized (GestorVentanas.class) {
+                copia = new ArrayList<>(ventanasActivas.values());
+            }
+            for (Window w : copia) {
+                if (w != null && w.isDisplayable() && w instanceof Actualizable act) {
+                    try {
+                        act.actualizarDatos();
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        });
     }
 }

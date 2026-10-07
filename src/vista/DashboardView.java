@@ -7,6 +7,7 @@ import service.ClienteService;
 import service.PedidoService;
 import service.ProductoService;
 import util.FormatoTexto;
+import vista.util.Actualizable;
 import vista.util.FabricaDaisyUI;
 import vista.util.GestorVentanas;
 import vista.util.Icons;
@@ -28,7 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
-public class DashboardView extends JFrame {
+public class DashboardView extends JFrame implements Actualizable {
 
     private final ClienteService clienteService;
     private final PedidoService pedidoService;
@@ -78,6 +79,8 @@ public class DashboardView extends JFrame {
         this.clienteService = new ClienteService();
         this.pedidoService = new PedidoService();
         this.productoService = new ProductoService();
+
+        GestorVentanas.registrarVentana(this);
 
         iniciarComponentes();
         cargarMetricas();
@@ -553,5 +556,17 @@ public class DashboardView extends JFrame {
 
     private void abrirReportes() {
         GestorVentanas.abrirOEnfocar(ReportesView.class, () -> new ReportesView(this));
+    }
+
+    @Override
+    public void actualizarDatos() {
+        cargarMetricas();
+        cargarUltimosPedidos();
+        if (clienteConsultado != null) {
+            Cliente actual = clienteService.buscarClientePorId(clienteConsultado.getIdCli());
+            if (actual != null) {
+                mostrarFichaCliente(actual);
+            }
+        }
     }
 }
