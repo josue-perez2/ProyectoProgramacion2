@@ -412,7 +412,15 @@ public class PedidoView extends JFrame implements Actualizable {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    verFactura();
+                    int fila = tablaPedidos.getSelectedRow();
+                    if (fila != -1) {
+                        int filaModelo = tablaPedidos.convertRowIndexToModel(fila);
+                        int idPed = (int) modeloPedidos.getValueAt(filaModelo, 0);
+                        Pedidos p = pedidoService.buscarPorId(idPed);
+                        if (p != null && "C".equalsIgnoreCase(p.getEstadoPed())) {
+                            verFactura();
+                        }
+                    }
                 }
             }
         });
@@ -593,7 +601,7 @@ public class PedidoView extends JFrame implements Actualizable {
             cmbEstado.setSelectedItem("Pendiente");
             btnAgregarItem.setEnabled(true);
         } else {
-            lblModoPedido.setText("Pedido #" + idPedidoSeleccionado + (bloqueado ? " (Cerrado)" : " (Activo)"));
+            lblModoPedido.setText("Pedido #" + idPedidoSeleccionado);
             lblModoPedido.setForeground(bloqueado ? Color.GRAY : (TemaGestor.esModoOscuro() ? new Color(80, 250, 123) : new Color(16, 185, 129)));
             btnGuardar.setEnabled(false);
             btnModificar.setEnabled(!bloqueado);
@@ -614,7 +622,15 @@ public class PedidoView extends JFrame implements Actualizable {
 
     private boolean tieneTotalPositivo() {
         try {
-            BigDecimal total = new BigDecimal(txtTotal.getText().trim());
+            String txt = txtTotal.getText().trim();
+            if (txt.startsWith("Q")) {
+                txt = txt.substring(1).trim();
+            }
+            int paren = txt.indexOf('(');
+            if (paren != -1) {
+                txt = txt.substring(0, paren).trim();
+            }
+            BigDecimal total = new BigDecimal(txt);
             return total.compareTo(BigDecimal.ZERO) > 0;
         } catch (Exception ex) {
             return false;
@@ -827,7 +843,8 @@ public class PedidoView extends JFrame implements Actualizable {
         Cliente c = clienteService.buscarClientePorId(p.getIdCliPed());
         asignarClienteActual(c);
         txtFecha.setText(p.getFechaPed() != null ? p.getFechaPed().format(formateadorFecha) : "");
-        txtTotal.setText(p.getTotalPed().toPlainString());
+        String estDesc = "C".equalsIgnoreCase(p.getEstadoPed()) ? "PAGADO" : ("A".equalsIgnoreCase(p.getEstadoPed()) ? "ANULADO" : "PENDIENTE");
+        txtTotal.setText("Q" + p.getTotalPed().setScale(2, RoundingMode.HALF_UP).toPlainString() + " (" + estDesc + ")");
         txtPuntosObtenidos.setText(String.valueOf(p.getPuntosObtenidosPed()));
         cmbEstado.setSelectedItem(estadoCompleto(p.getEstadoPed()));
 
@@ -1345,12 +1362,10 @@ public class PedidoView extends JFrame implements Actualizable {
 
     private void verFactura() {
         if (idPedidoSeleccionado == null) {
-            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un pedido cobrado para ver su factura.");
             return;
         }
         Pedidos p = pedidoService.buscarPorId(idPedidoSeleccionado);
         if (p == null || !"C".equalsIgnoreCase(p.getEstadoPed())) {
-            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Solo los pedidos pagados cuentan con factura.");
             return;
         }
         new FacturaView(this, idPedidoSeleccionado).setVisible(true);

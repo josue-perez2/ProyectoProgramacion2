@@ -24,6 +24,7 @@ import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -224,7 +225,15 @@ public class PagoView extends JFrame implements Actualizable {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    verFactura();
+                    int fila = tablaPagos.getSelectedRow();
+                    if (fila != -1) {
+                        int filaModelo = tablaPagos.convertRowIndexToModel(fila);
+                        int idPed = (int) modeloPagos.getValueAt(filaModelo, 1);
+                        Pedidos p = pedidoService.buscarPorId(idPed);
+                        if (p != null && "C".equalsIgnoreCase(p.getEstadoPed())) {
+                            verFactura();
+                        }
+                    }
                 }
             }
         });
@@ -286,12 +295,20 @@ public class PagoView extends JFrame implements Actualizable {
 
     private void actualizarEstadoBotones(boolean seleccionActiva) {
         btnEliminar.setEnabled(seleccionActiva);
-        boolean cobradoEnCombo = false;
-        int idx = cmbPedido.getSelectedIndex();
-        if (idx != -1 && idx < estadosPedido.size()) {
-            cobradoEnCombo = "C".equalsIgnoreCase(estadosPedido.get(idx));
+        boolean cobrado = false;
+        int fila = tablaPagos.getSelectedRow();
+        if (fila != -1) {
+            int filaModelo = tablaPagos.convertRowIndexToModel(fila);
+            int idPed = (int) modeloPagos.getValueAt(filaModelo, 1);
+            Pedidos p = pedidoService.buscarPorId(idPed);
+            cobrado = p != null && "C".equalsIgnoreCase(p.getEstadoPed());
+        } else {
+            int idx = cmbPedido.getSelectedIndex();
+            if (idx != -1 && idx < estadosPedido.size()) {
+                cobrado = "C".equalsIgnoreCase(estadosPedido.get(idx));
+            }
         }
-        btnVerFactura.setEnabled(seleccionActiva || cobradoEnCombo);
+        btnVerFactura.setEnabled(cobrado);
     }
 
     private void cargarPedidos() {
@@ -310,11 +327,7 @@ public class PagoView extends JFrame implements Actualizable {
         try {
             List<Pedidos> lista = pedidoService.listar();
             for (Pedidos p : lista) {
-                Cliente c = clienteService.buscarClientePorId(p.getIdCliPed());
-                String nombreCliente = c != null ? c.getNombreCli() : "Cliente #" + p.getIdCliPed();
-                String estadoSufijo = "C".equalsIgnoreCase(p.getEstadoPed()) ? " [PAGADO]" : ("A".equalsIgnoreCase(p.getEstadoPed()) ? " [ANULADO]" : "");
-                String etiqueta = "Pedido #" + p.getIdPed() + " - " + nombreCliente + " (Q" + p.getTotalPed() + ")" + estadoSufijo;
-                cmbPedido.addItem(etiqueta);
+                cmbPedido.addItem("Pedido #" + p.getIdPed());
                 idsPedido.add(p.getIdPed());
                 totalesPedido.add(p.getTotalPed());
                 idsClientePedido.add(p.getIdCliPed());
@@ -365,16 +378,17 @@ public class PagoView extends JFrame implements Actualizable {
         BigDecimal total = totalesPedido.get(index);
         String estado = estadosPedido.get(index);
 
+        String totalTexto = "Q" + total.setScale(2, RoundingMode.HALF_UP).toPlainString();
         if ("C".equalsIgnoreCase(estado)) {
-            txtTotalPagar.setText(total.toPlainString() + " (PAGADO)");
+            txtTotalPagar.setText(totalTexto + " (PAGADO)");
             btnProcesar.setEnabled(false);
             btnTerminalTarjeta.setEnabled(false);
         } else if ("A".equalsIgnoreCase(estado)) {
-            txtTotalPagar.setText(total.toPlainString() + " (ANULADO)");
+            txtTotalPagar.setText(totalTexto + " (ANULADO)");
             btnProcesar.setEnabled(false);
             btnTerminalTarjeta.setEnabled(false);
         } else {
-            txtTotalPagar.setText(total.toPlainString());
+            txtTotalPagar.setText(totalTexto + " (PENDIENTE)");
             boolean tieneMontoValido = total.compareTo(BigDecimal.ZERO) > 0;
             btnProcesar.setEnabled(tieneMontoValido);
             btnTerminalTarjeta.setEnabled(tieneMontoValido);
@@ -612,22 +626,22 @@ public class PagoView extends JFrame implements Actualizable {
     private void verFactura() {
         int fila = tablaPagos.getSelectedRow();
         if (fila != -1) {
-            int idPed = (int) modeloPagos.getValueAt(fila, 1);
-            new FacturaView(this, idPed).setVisible(true);
+            int filaModelo = tablaPagos.convertRowIndexToModel(fila);
+            int idPed = (int) modeloPagos.getValueAt(filaModelo, 1);
+            Pedidos p = pedidoService.buscarPorId(idPed);
+            if (p != null && "C".equalsIgnoreCase(p.getEstadoPed())) {
+                new FacturaView(this, idPed).setVisible(true);
+            }
             return;
         }
         int index = cmbPedido.getSelectedIndex();
         if (index != -1 && index < idsPedido.size()) {
             String est = estadosPedido.get(index);
-            if (!"C".equalsIgnoreCase(est)) {
-                FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "El pedido seleccionado aún no ha sido cobrado. Las facturas solo se generan para pedidos pagados.");
-                return;
+            if ("C".equalsIgnoreCase(est)) {
+                int idPed = idsPedido.get(index);
+                new FacturaView(this, idPed).setVisible(true);
             }
-            int idPed = idsPedido.get(index);
-            new FacturaView(this, idPed).setVisible(true);
-            return;
         }
-        FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "Seleccione un pago de la tabla o un pedido cobrado para ver su factura.");
     }
 
     private void eliminarPago() {
