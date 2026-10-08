@@ -81,6 +81,17 @@ public class FacturaView extends JDialog {
         this(parent, 1);
     }
 
+    @Override
+    public void setVisible(boolean b) {
+        if (b) {
+            Pedidos p = pedidoService.buscarPorId(idPedido);
+            if (p == null || !"C".equalsIgnoreCase(p.getEstadoPed())) {
+                return;
+            }
+        }
+        super.setVisible(b);
+    }
+
     private void cargarCatalogos() {
         for (Sandwich s : sandwichService.listar()) {
             catalogoSandwich.put(s.getIdSan(), s.getNombreSan());
@@ -138,7 +149,6 @@ public class FacturaView extends JDialog {
         }
 
         if (!"C".equalsIgnoreCase(pedido.getEstadoPed())) {
-            FabricaDaisyUI.mostrarAdvertencia(this, "Aviso", "El pedido #" + idPedido + " aún no ha sido cobrado. Solo los pedidos pagados cuentan con factura.");
             dispose();
             return;
         }
