@@ -284,27 +284,21 @@ public class PagoService {
 
     private void descontarStockPedido(int idPedido) {
         List<DetallesPedido> detalles = detallesPedidoDao.listarPorPedido(idPedido);
+        String motivo = "VENTA PEDIDO #" + idPedido;
         for (DetallesPedido d : detalles) {
             String tipo = d.getTipoItemDet();
             int idItem = d.getIdItemDet();
             BigDecimal cant = d.getCantidadDet() != null ? d.getCantidadDet() : BigDecimal.ONE;
 
             if ("P".equalsIgnoreCase(tipo)) {
-                Productos prod = productosDao.buscarPorId(idItem);
-                String nomProd = prod != null ? prod.getNombrePro() : "Producto #" + idItem;
-                String motivo = "VENTA PEDIDO #" + idPedido + " [" + nomProd + "]";
                 aplicarSalidaStock(idItem, cant, motivo);
             } else if ("S".equalsIgnoreCase(tipo)) {
-                String nomSan = obtenerNombreSandwich(idItem);
-                String motivo = "VENTA PEDIDO #" + idPedido + " [" + nomSan + "]";
                 List<DetalleSandwich> ingList = detalleSandwichDao.listarPorSandwich(idItem);
                 for (DetalleSandwich ing : ingList) {
                     BigDecimal requerido = ing.getCantidadDet().multiply(cant);
                     aplicarSalidaStock(ing.getIdProDet(), requerido, motivo);
                 }
             } else if ("M".equalsIgnoreCase(tipo)) {
-                String nomMen = obtenerNombreMenu(idItem);
-                String motivo = "VENTA PEDIDO #" + idPedido + " [" + nomMen + "]";
                 List<DetalleMenu> compList = detalleMenuDao.listarPorMenu(idItem);
                 for (DetalleMenu comp : compList) {
                     BigDecimal cantComp = comp.getCantidadDet().multiply(cant);
@@ -324,27 +318,21 @@ public class PagoService {
 
     private void restaurarStockPedido(int idPedido) {
         List<DetallesPedido> detalles = detallesPedidoDao.listarPorPedido(idPedido);
+        String motivo = "REVERSIÓN PEDIDO #" + idPedido;
         for (DetallesPedido d : detalles) {
             String tipo = d.getTipoItemDet();
             int idItem = d.getIdItemDet();
             BigDecimal cant = d.getCantidadDet() != null ? d.getCantidadDet() : BigDecimal.ONE;
 
             if ("P".equalsIgnoreCase(tipo)) {
-                Productos prod = productosDao.buscarPorId(idItem);
-                String nomProd = prod != null ? prod.getNombrePro() : "Producto #" + idItem;
-                String motivo = "REVERSION PEDIDO #" + idPedido + " [" + nomProd + "]";
                 aplicarEntradaStock(idItem, cant, motivo);
             } else if ("S".equalsIgnoreCase(tipo)) {
-                String nomSan = obtenerNombreSandwich(idItem);
-                String motivo = "REVERSION PEDIDO #" + idPedido + " [" + nomSan + "]";
                 List<DetalleSandwich> ingList = detalleSandwichDao.listarPorSandwich(idItem);
                 for (DetalleSandwich ing : ingList) {
                     BigDecimal requerido = ing.getCantidadDet().multiply(cant);
                     aplicarEntradaStock(ing.getIdProDet(), requerido, motivo);
                 }
             } else if ("M".equalsIgnoreCase(tipo)) {
-                String nomMen = obtenerNombreMenu(idItem);
-                String motivo = "REVERSION PEDIDO #" + idPedido + " [" + nomMen + "]";
                 List<DetalleMenu> compList = detalleMenuDao.listarPorMenu(idItem);
                 for (DetalleMenu comp : compList) {
                     BigDecimal cantComp = comp.getCantidadDet().multiply(cant);

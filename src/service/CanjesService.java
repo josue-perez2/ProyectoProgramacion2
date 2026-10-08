@@ -127,18 +127,18 @@ public class CanjesService {
             autoCommitOriginal = conn.getAutoCommit();
             conn.setAutoCommit(false);
 
-            descontarStockRecompensa(recompensa);
-
-            BigDecimal puntosDescontar = new BigDecimal(recompensa.getPuntosRequeridosRec());
-            cliente.setSaldoPuntoCli(cliente.getSaldoPuntoCli().subtract(puntosDescontar));
-            clienteDao.actualizar(cliente);
-
             Canjes canje = new Canjes();
             canje.setIdCliCan(cliente.getIdCli());
             canje.setIdRecCan(recompensa.getIdRec());
             canje.setFechaCan(LocalDateTime.now());
             canje.setPuntosRecompensaCan(recompensa.getPuntosRequeridosRec());
             canjesDao.insertar(canje);
+
+            descontarStockRecompensa(recompensa, canje.getIdCan());
+
+            BigDecimal puntosDescontar = new BigDecimal(recompensa.getPuntosRequeridosRec());
+            cliente.setSaldoPuntoCli(cliente.getSaldoPuntoCli().subtract(puntosDescontar));
+            clienteDao.actualizar(cliente);
 
             HistorialPuntos his = new HistorialPuntos();
             his.setIdCliHis(cliente.getIdCli());
@@ -222,10 +222,11 @@ public class CanjesService {
         return evaluarDisponibilidad(recompensa, null).getTexto();
     }
 
-    private void descontarStockRecompensa(Recompensas recompensa) {
+    private void descontarStockRecompensa(Recompensas recompensa, int idCanje) {
         String tipo = recompensa.getTipoItemRec();
         int idItem = recompensa.getIdItemRec();
         Map<Integer, Productos> mapa = obtenerMapaProductos();
+        String motivo = "CANJE #" + idCanje;
 
         if ("P".equalsIgnoreCase(tipo)) {
             Productos prod = mapa.get(idItem);
@@ -241,7 +242,7 @@ public class CanjesService {
             mov.setIdProImo(prod.getIdPro());
             mov.setFechaImo(LocalDateTime.now());
             mov.setCantidadImo(BigDecimal.ONE);
-            mov.setTipoMovimientoImo("SALIDA POR CANJE");
+            mov.setTipoMovimientoImo(motivo);
             mov.setExistenciaAnteriorImo(anterior);
             mov.setExistenciaNuevaImo(nueva);
             inventarioMovimientosDao.insertar(mov);
@@ -267,7 +268,7 @@ public class CanjesService {
                     mov.setIdProImo(prod.getIdPro());
                     mov.setFechaImo(LocalDateTime.now());
                     mov.setCantidadImo(det.getCantidadDet());
-                    mov.setTipoMovimientoImo("SALIDA POR CANJE");
+                    mov.setTipoMovimientoImo(motivo);
                     mov.setExistenciaAnteriorImo(anterior);
                     mov.setExistenciaNuevaImo(nueva);
                     inventarioMovimientosDao.insertar(mov);
@@ -298,7 +299,7 @@ public class CanjesService {
                         mov.setIdProImo(prod.getIdPro());
                         mov.setFechaImo(LocalDateTime.now());
                         mov.setCantidadImo(det.getCantidadDet());
-                        mov.setTipoMovimientoImo("SALIDA POR CANJE");
+                        mov.setTipoMovimientoImo(motivo);
                         mov.setExistenciaAnteriorImo(anterior);
                         mov.setExistenciaNuevaImo(nueva);
                         inventarioMovimientosDao.insertar(mov);

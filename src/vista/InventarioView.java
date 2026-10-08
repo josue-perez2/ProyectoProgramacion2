@@ -65,7 +65,6 @@ public class InventarioView extends JFrame implements Actualizable {
             "Bajo Stock (1 - 15)",
             "Agotados (0)"
     });
-    private final JButton btnBuscar = FabricaDaisyUI.crearBotonPrimario("Buscar", Icons.search(16), e -> filtrarTablaProductos());
 
     private final DefaultTableModel modeloProductos = new DefaultTableModel() {
         @Override
@@ -330,9 +329,6 @@ public class InventarioView extends JFrame implements Actualizable {
         FabricaDaisyUI.estilizarCampo(cmbFiltroEstado);
         cmbFiltroEstado.addActionListener(e -> filtrarTablaProductos());
 
-        btnBuscar.setPreferredSize(new Dimension(100, 38));
-        FabricaDaisyUI.aplicarBotonPrimario(btnBuscar);
-
         JLabel lblFiltrar = new JLabel("Filtrar:");
         lblFiltrar.setFont(new Font("Segoe UI", Font.BOLD, 12));
         lblFiltrar.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #334155; [dark]foreground: #f8f8f2");
@@ -341,7 +337,6 @@ public class InventarioView extends JFrame implements Actualizable {
         panelFiltros.add(txtBuscar);
         panelFiltros.add(cmbFiltroCategoria);
         panelFiltros.add(cmbFiltroEstado);
-        panelFiltros.add(btnBuscar);
 
         JPanel panelAccionesDer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         panelAccionesDer.setOpaque(false);
@@ -478,7 +473,7 @@ public class InventarioView extends JFrame implements Actualizable {
         panel.add(panelBarra, BorderLayout.NORTH);
 
         tablaMovimientos.setModel(modeloMovimientos);
-        tablaMovimientos.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
+        tablaMovimientos.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         FabricaDaisyUI.estilizarTabla(tablaMovimientos);
 
         JScrollPane scroll = new JScrollPane(tablaMovimientos);
@@ -514,7 +509,7 @@ public class InventarioView extends JFrame implements Actualizable {
             listaProductosMemoria.addAll(lista);
             for (Productos p : lista) {
                 idsProductos.add(p.getIdPro());
-                cmbProductos.addItem("[" + p.getCodigoPro() + "] " + p.getNombrePro());
+                cmbProductos.addItem(p.getNombrePro());
             }
         } catch (RuntimeException ex) {
             JOptionPane.showMessageDialog(this,
@@ -539,7 +534,7 @@ public class InventarioView extends JFrame implements Actualizable {
         BigDecimal exist = p.getExistenciaPro() != null ? p.getExistenciaPro() : BigDecimal.ZERO;
         BigDecimal precio = p.getPrecioPro() != null ? p.getPrecioPro() : BigDecimal.ZERO;
 
-        lblDetalleCategoria.setText("Categoría: " + nomCat);
+        lblDetalleCategoria.setText("Código: " + p.getCodigoPro() + " | Categoría: " + nomCat);
         lblDetalleCategoria.putClientProperty(FabricaDaisyUI.PROPIEDAD_ESTILO, "[light]foreground: #475569; [dark]foreground: #bd93f9");
 
         lblDetallePrecio.setText("Precio Unitario: Q" + precio.setScale(2).toPlainString());
@@ -607,7 +602,7 @@ public class InventarioView extends JFrame implements Actualizable {
         int confirm = JOptionPane.showConfirmDialog(
                 this,
                 "¿Desea registrar el abastecimiento de " + cantidad.stripTrailingZeros().toPlainString() + " unidades para:\n"
-                        + prod.getNombrePro() + " [" + prod.getCodigoPro() + "]?",
+                        + prod.getNombrePro() + "?",
                 "Confirmar Abastecimiento",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE,
@@ -709,18 +704,18 @@ public class InventarioView extends JFrame implements Actualizable {
     }
 
     private void configurarColumnasMovimientos() {
-        String[] cols = {"ID Mov.", "Fecha y Hora", "ID Prod.", "Producto", "Cantidad", "Stock Anterior", "Stock Nuevo", "Tipo de Movimiento"};
+        String[] cols = {"ID Mov.", "Fecha y Hora", "Código", "Producto", "Cantidad", "Stock Anterior", "Stock Nuevo", "Tipo de Movimiento"};
         modeloMovimientos.setColumnIdentifiers(cols);
+        tablaMovimientos.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         TableColumnModel cm = tablaMovimientos.getColumnModel();
-        cm.getColumn(0).setPreferredWidth(55);
-        cm.getColumn(0).setMaxWidth(70);
-        cm.getColumn(1).setPreferredWidth(140);
-        cm.getColumn(2).setPreferredWidth(65);
-        cm.getColumn(3).setPreferredWidth(210);
-        cm.getColumn(4).setPreferredWidth(75);
-        cm.getColumn(5).setPreferredWidth(85);
-        cm.getColumn(6).setPreferredWidth(85);
-        cm.getColumn(7).setPreferredWidth(190);
+        cm.getColumn(0).setPreferredWidth(65);
+        cm.getColumn(1).setPreferredWidth(145);
+        cm.getColumn(2).setPreferredWidth(95);
+        cm.getColumn(3).setPreferredWidth(200);
+        cm.getColumn(4).setPreferredWidth(80);
+        cm.getColumn(5).setPreferredWidth(95);
+        cm.getColumn(6).setPreferredWidth(95);
+        cm.getColumn(7).setPreferredWidth(260);
 
         RenderizadorCentro renderCentro = new RenderizadorCentro();
         RenderizadorIzquierda renderIzq = new RenderizadorIzquierda();
@@ -732,6 +727,70 @@ public class InventarioView extends JFrame implements Actualizable {
         cm.getColumn(5).setCellRenderer(renderCentro);
         cm.getColumn(6).setCellRenderer(renderCentro);
         cm.getColumn(7).setCellRenderer(new RenderizadorTipoMovimiento());
+    }
+
+    private String simplificarTipoMovimiento(String tipoRaw) {
+        if (tipoRaw == null) {
+            return "";
+        }
+        String t = tipoRaw.trim();
+        String upper = t.toUpperCase();
+        if (upper.contains("REVERSION") || upper.contains("REVERSIÓN")) {
+            int idxPed = upper.indexOf("PEDIDO #");
+            if (idxPed != -1) {
+                int start = idxPed + 8;
+                int end = start;
+                while (end < upper.length() && Character.isDigit(upper.charAt(end))) {
+                    end++;
+                }
+                return "REVERSIÓN PEDIDO #" + upper.substring(start, end).trim();
+            }
+            return "REVERSIÓN";
+        }
+        if (upper.contains("VENTA")) {
+            int idxPed = upper.indexOf("PEDIDO #");
+            if (idxPed != -1) {
+                int start = idxPed + 8;
+                int end = start;
+                while (end < upper.length() && Character.isDigit(upper.charAt(end))) {
+                    end++;
+                }
+                return "VENTA PEDIDO #" + upper.substring(start, end).trim();
+            }
+            return "VENTA";
+        }
+        if (upper.contains("CANJE")) {
+            int idxCan = upper.indexOf("CANJE #");
+            if (idxCan != -1) {
+                int start = idxCan + 7;
+                int end = start;
+                while (end < upper.length() && Character.isDigit(upper.charAt(end))) {
+                    end++;
+                }
+                return "CANJE #" + upper.substring(start, end).trim();
+            }
+            int idxHash = upper.indexOf('#');
+            if (idxHash != -1) {
+                int start = idxHash + 1;
+                int end = start;
+                while (end < upper.length() && Character.isDigit(upper.charAt(end))) {
+                    end++;
+                }
+                return "CANJE #" + upper.substring(start, end).trim();
+            }
+            return "CANJE";
+        }
+        if (upper.contains("ABASTEC")) {
+            return "ABASTECIMIENTO";
+        }
+        if (upper.contains("DEVOLUC")) {
+            return "DEVOLUCIÓN";
+        }
+        int corchete = t.indexOf('[');
+        if (corchete != -1) {
+            return t.substring(0, corchete).trim();
+        }
+        return t;
     }
 
     private void cargarTablaMovimientos() {
@@ -803,8 +862,10 @@ public class InventarioView extends JFrame implements Actualizable {
     private void filtrarTablaMovimientos() {
         modeloMovimientos.setRowCount(0);
         Map<Integer, String> nombreProductos = new HashMap<>();
+        Map<Integer, String> codigoProductos = new HashMap<>();
         for (Productos p : listaProductosMemoria) {
-            nombreProductos.put(p.getIdPro(), p.getNombrePro() + " [" + p.getCodigoPro() + "]");
+            nombreProductos.put(p.getIdPro(), p.getNombrePro());
+            codigoProductos.put(p.getIdPro(), p.getCodigoPro());
         }
 
         String tipoFiltro = cmbFiltroTipoMov.getSelectedItem() != null ? cmbFiltroTipoMov.getSelectedItem().toString() : "TODOS LOS MOVIMIENTOS";
@@ -829,7 +890,7 @@ public class InventarioView extends JFrame implements Actualizable {
                             continue;
                         }
                     } else if (normFiltro.contains("REVERSION")) {
-                        if (!tipo.contains("REVERSION")) {
+                        if (!tipo.contains("REVERSION") && !tipo.contains("REVERSIÓN")) {
                             continue;
                         }
                     } else if (!tipo.contains(normFiltro)) {
@@ -837,14 +898,17 @@ public class InventarioView extends JFrame implements Actualizable {
                     }
                 }
 
+                String codProd = codigoProductos.getOrDefault(m.getIdProImo(), String.valueOf(m.getIdProImo()));
                 String nomProd = nombreProductos.getOrDefault(m.getIdProImo(), "Producto #" + m.getIdProImo());
+                String tipoTexto = simplificarTipoMovimiento(m.getTipoMovimientoImo());
                 String fecha = m.getFechaImo() != null ? m.getFechaImo().format(formateadorFecha) : "";
                 String stockAnt = m.getExistenciaAnteriorImo() != null ? m.getExistenciaAnteriorImo().stripTrailingZeros().toPlainString() : "-";
                 String stockNue = m.getExistenciaNuevaImo() != null ? m.getExistenciaNuevaImo().stripTrailingZeros().toPlainString() : "-";
 
                 if (!criterioTexto.isEmpty()) {
                     boolean match = normalizarTexto(nomProd).contains(criterioTexto)
-                            || normalizarTexto(tipo).contains(criterioTexto)
+                            || normalizarTexto(codProd).contains(criterioTexto)
+                            || normalizarTexto(tipoTexto).contains(criterioTexto)
                             || normalizarTexto(fecha).contains(criterioTexto)
                             || String.valueOf(m.getIdImo()).contains(criterioTexto);
                     if (!match) {
@@ -855,12 +919,12 @@ public class InventarioView extends JFrame implements Actualizable {
                 modeloMovimientos.addRow(new Object[]{
                         m.getIdImo(),
                         fecha,
-                        m.getIdProImo(),
+                        codProd,
                         nomProd,
                         m.getCantidadImo() != null ? m.getCantidadImo().stripTrailingZeros().toPlainString() : "0",
                         stockAnt,
                         stockNue,
-                        m.getTipoMovimientoImo() != null ? m.getTipoMovimientoImo() : ""
+                        tipoTexto
                 });
             }
         } catch (RuntimeException ex) {
@@ -1006,6 +1070,8 @@ public class InventarioView extends JFrame implements Actualizable {
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             JLabel label = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
             label.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+            label.setHorizontalAlignment(SwingConstants.LEFT);
+            label.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
             String val = value != null ? value.toString() : "";
             if (val.contains("ABASTECIMIENTO")) {
                 label.setForeground(new Color(16, 185, 129));
@@ -1013,7 +1079,7 @@ public class InventarioView extends JFrame implements Actualizable {
                 label.setForeground(new Color(59, 130, 246));
             } else if (val.contains("CANJE")) {
                 label.setForeground(new Color(168, 85, 247));
-            } else if (val.contains("REVERSION")) {
+            } else if (val.contains("REVERSION") || val.contains("REVERSIÓN")) {
                 label.setForeground(new Color(217, 119, 6));
             } else {
                 label.setForeground(table.getForeground());
